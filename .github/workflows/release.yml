@@ -36,7 +36,7 @@ jobs:
             }"
       - name: Zip
         run: cd extension/dist && zip -r ../../prompt-refiner-extension-${{ github.ref_name }}.zip .
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: prompt-refiner-extension-${{ github.ref_name }}.zip
           generate_release_notes: true
