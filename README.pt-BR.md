@@ -4,10 +4,9 @@
 
 Selecione o texto cru que você acabou de escrever — notas soltas, frases pela metade, erros de digitação e tudo — e o Prompt Refiner reescreve como um prompt bem estruturado para a IA que você vai usar. Ele substitui **só a sua seleção**, no mesmo lugar onde você estava escrevendo: no Chrome ou em qualquer app do Mac.
 
-<!-- TODO: add demo GIF (docs/demo.gif) -->
+![Um pedido torto sendo selecionado e substituído, no lugar, por um prompt bem estruturado](docs/demo.gif)
 
-> ### TODO — o GIF de demonstração entra aqui
-> `docs/demo.gif`: um antes/depois curto, mostrando uma seleção bagunçada sendo substituída no lugar.
+<sub>Gravado com a extensão real e um backend real — <code>extension/scripts/record-demo.mjs</code>. O prompt refinado que aparece é o resultado de verdade, não uma simulação.</sub>
 
 > **Idioma da interface:** os menus da extensão, a página de configurações e as mensagens do macOS estão em português do Brasil. Os seus prompts são refinados no idioma em que você escrever. Interface em inglês está nos [próximos passos](#próximos-passos).
 

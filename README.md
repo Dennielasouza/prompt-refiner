@@ -4,10 +4,9 @@
 
 Select the rough text you just typed — loose notes, half sentences, typos and all — and Prompt Refiner rewrites it into a well-structured prompt for the AI you are about to use. It replaces **only your selection**, right where you were writing: in Chrome, or in any Mac app.
 
-<!-- TODO: add demo GIF (docs/demo.gif) -->
+![A messy request being selected and replaced, in place, by a well-structured prompt](docs/demo.gif)
 
-> ### TODO — demo GIF goes here
-> `docs/demo.gif`: a short before/after of a messy selection being replaced in place.
+<sub>Recorded with the real extension and a real backend — <code>extension/scripts/record-demo.mjs</code>. The refined prompt you see is the genuine output, not a mock-up.</sub>
 
 > **Interface language:** the extension menus, the settings page and the macOS messages are in Brazilian Portuguese. Your prompts are refined in whatever language you wrote them in. English UI is on the [roadmap](#roadmap).
 
