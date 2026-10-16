@@ -32,7 +32,7 @@ const TARGET = process.env.DEMO_TARGET ?? "chatgpt";
 const MESSY =
   process.env.DEMO_TEXT ?? "preciso escrever um email pro meu chefe pedindo pra trabalhar remoto na sexta, sem parecer folgado";
 
-const VIEWPORT = { width: 1000, height: 620 };
+const VIEWPORT = { width: 1060, height: 700 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
 if (!existsSync(EXT_DIR)) throw new Error(`build first: node scripts/build.mjs --e2e (missing ${EXT_DIR})`);
@@ -68,33 +68,48 @@ await sw.evaluate(([endpoint, target]) => chrome.storage.sync.set({ endpoint, de
 
 const page = await context.newPage();
 await page.goto(pageUrl);
-await page.waitForTimeout(900);
+await page.waitForTimeout(1000);
 
-// 1. Type the messy prompt the way a person would.
+const destacar = (id) => page.evaluate((i) => window.__destacar(i), id);
+const focar = (on) => page.evaluate((o) => window.__focar(o), on);
+
+// 1. A pessoa escreve do jeito que pensa.
+await destacar(null);
 await page.click("#composer");
-await page.type("#composer", MESSY, { delay: 45 });
-await wait(900);
+await focar(true);
+await page.type("#composer", MESSY, { delay: 42 });
+await wait(800);
 
-// 2. Select everything — exactly what the person does before the right-click.
+// 2. Seleciona — é o que ela faz antes de acionar.
 await page.evaluate(() => {
   const el = document.getElementById("composer");
   el.focus();
   el.setSelectionRange(0, el.value.length);
 });
-await wait(1100);
+await wait(1000);
 
-// 3. Refine (same entry point the context menu calls).
+// 3. Mostra as três formas de acionar, uma de cada vez, e acende a que vai ser usada.
+//    O realce é só visual: quem refina é a extensão, pelo mesmo ponto de entrada do menu.
+for (const id of ["a-menu", "a-mac", "a-tecla"]) {
+  await destacar(id);
+  await wait(900);
+}
+await wait(500);
+
+// 4. Refina (mesmo ponto de entrada que o menu do botão direito chama).
 const tabId = await sw.evaluate(async (url) => (await chrome.tabs.query({ url: `${url}*` }))[0].id, pageUrl);
 await sw.evaluate(([id, target]) => globalThis.__promptRefinerTest.runRefinement(id, 0, target, "balanced"), [tabId, TARGET]);
 
-// 4. Let the result and the "Desfazer" toast breathe.
+// 5. O resultado aparece no lugar, e o aviso com "Desfazer" fica visível.
 await page.waitForFunction(() => document.getElementById("composer").value.length > 160, null, { timeout: 60_000 });
 await page.evaluate(() => {
   const el = document.getElementById("composer");
   el.setSelectionRange(0, 0);
   el.scrollTop = 0;
 });
-await wait(3400);
+await destacar(null);
+await focar(false);
+await wait(4200);
 
 const refined = await page.evaluate(() => document.getElementById("composer").value);
 console.log(`\nprompt refinado (${refined.length} chars):\n${refined}\n`);
@@ -110,7 +125,7 @@ const webm = join(
 );
 const palette = join(TMP, "palette.png");
 const gif = join(OUT_DIR, "demo.gif");
-const filters = "fps=11,scale=900:-1:flags=lanczos";
+const filters = "fps=10,scale=900:-1:flags=lanczos";
 execFileSync("ffmpeg", ["-y", "-i", webm, "-vf", `${filters},palettegen=stats_mode=diff`, palette], { stdio: "ignore" });
 execFileSync(
   "ffmpeg",
