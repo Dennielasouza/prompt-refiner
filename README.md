@@ -13,7 +13,7 @@ Select the rough text you just typed — loose notes, half sentences, typos and 
 ## What makes it different
 
 - **It works where you write.** No second window, no separate chat, nothing to paste. You select, you choose, and the text in the field becomes the refined prompt. Chrome (right-click menu or a keyboard shortcut) and any Mac app that supports macOS Services, including a double tap on ⌥ Option.
-- **You don't need a paid API key.** If you already pay for a Claude subscription, Prompt Refiner can use it through the official Claude Code CLI — no API credits. See [Choose the engine](#2-choose-the-engine).
+- **You don't need a paid API key.** If you already pay for a Claude subscription, Prompt Refiner can use it through the official Claude Code CLI — no API credits. See [Engines](#engines).
 - **It never invents facts about you.** The refiner organizes what you wrote and, in deep mode, adds *method* (success criteria, process, output format, a final check). It never adds data, audiences, deadlines, names or a tone you did not ask for.
 - **Your text is never changed when something fails.** If the call fails, or the field moved, or the editor rejects the insertion, nothing is written. In the browser you get a notice with a **Copy prompt** button; in a Mac app the selection stays exactly as it was.
 - **One click to undo**, plus the field's own ⌘Z / Ctrl+Z.

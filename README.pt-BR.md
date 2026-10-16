@@ -13,7 +13,7 @@ Selecione o texto cru que você acabou de escrever — notas soltas, frases pela
 ## O que ele tem de diferente
 
 - **Funciona onde você escreve.** Sem segunda janela, sem chat separado, sem copiar e colar. Você seleciona, escolhe, e o texto do campo passa a ser o prompt refinado. No Chrome (menu do botão direito ou atalho de teclado) e em qualquer app do Mac que aceite os Serviços do macOS, inclusive com um toque duplo no ⌥ Option.
-- **Você não precisa de chave de API paga.** Se você já paga uma assinatura do Claude, o Prompt Refiner pode usar ela pelo Claude Code oficial — sem créditos de API. Veja [Escolha o motor](#2-escolha-o-motor).
+- **Você não precisa de chave de API paga.** Se você já paga uma assinatura do Claude, o Prompt Refiner pode usar ela pelo Claude Code oficial — sem créditos de API. Veja [Motores](#motores).
 - **Ele nunca inventa fatos sobre você.** O refinador organiza o que você escreveu e, no modo profundo, acrescenta *método* (critérios de sucesso, processo, formato de saída, checagem final). Nunca acrescenta dados, público, prazos, nomes nem um tom que você não pediu.
 - **Se algo falhar, o seu texto não muda.** Se a chamada falhar, se o campo se mexer, se o editor recusar a inserção — nada é escrito. No navegador aparece um aviso com o botão **Copiar prompt**; num app do Mac a seleção fica exatamente como estava.
 - **Um clique para desfazer**, além do ⌘Z / Ctrl+Z do próprio campo.
