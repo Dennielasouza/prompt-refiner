@@ -44,47 +44,62 @@ The engine that *refines* and the destination you are *writing for* are independ
 
 ## Install
 
-**In a hurry?** If you already pay for Claude and have [Claude Code](https://code.claude.com) signed in, this is the whole thing:
+**→ The step-by-step guide is in [INSTALL.md](INSTALL.md).** Two commands, about five minutes:
 
 ```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git && cd prompt-refiner
-npm install
-cp backend/.env.example backend/.env     # already set to your Claude subscription
-npm run dev                              # leave it running
+git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner
 ```
-
-Then, in another terminal, check it answers and refine something:
 
 ```bash
-curl -s http://127.0.0.1:8787/api/health
-curl -s -X POST http://127.0.0.1:8787/api/refine \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"como eu peço aumento? trabalho ha 2 anos, entrego bem mas nunca falei disso com meu gestor","target":"chatgpt","depth":"deep"}'
+cd ~/prompt-refiner && ./instalar.sh
 ```
 
-What comes back is that loose question turned into a prompt that says what to cover and, because you never said what industry or salary you are talking about, tells the destination not to assume any of it. That is the whole product. Everything below is the same thing explained slowly, plus the browser extension and the Mac integration.
+The installer handles dependencies, configuration, the extension build, the backend and the Mac shortcuts, then refines a real sentence so you can see it work. Two things stay manual, because Chrome and macOS only accept them through their own interfaces: loading the unpacked extension, and granting Accessibility for the ⌥⌥ gesture. [INSTALL.md](INSTALL.md) covers both, plus what to do when something goes wrong.
 
-### 1. Clone and install
+The rest of this README is reference: what each setting does, how the engine works, and how to work on the code.
 
-```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git
-cd prompt-refiner
-npm install
-```
+## How to use it
 
-Then create your configuration file from the example:
+### In the browser
 
-```bash
-cp backend/.env.example backend/.env
-```
+1. Write in any text field — ChatGPT, Claude, Gemini, or any `<input>`, `<textarea>` or rich editor.
+2. Select the part you want refined.
+3. Right-click inside the field → **Prompt Refiner**, and pick one of:
+   - **Refinar prompt** — balanced
+   - **Refinar prompt (profundo)** — deep
+   - **Gerar arquivo de instruções** — a `CLAUDE.md` or `AGENTS.md`
+4. Choose the destination. **✨ Automático** reads it from the site: `chatgpt.com` and `chat.openai.com` → ChatGPT, `claude.ai` → Claude, `gemini.google.com` and `aistudio.google.com` → Gemini, anything else → a generic prompt. Codex and Claude Code are never guessed — pick them yourself.
+5. The selection is replaced, and a notice offers **Desfazer** (undo).
 
-`backend/.env` is where the engine is configured. It is git-ignored — never commit it.
+**Keyboard shortcut: Alt+Shift+R** refines the selection using the default destination and depth from the settings page. Change the key at `chrome://extensions/shortcuts`.
 
-> Commands below carry `-w backend` or `-w extension`. That is npm for "run this inside that workspace": the repository holds three of them (`backend`, `extension`, `desktop`) and `-w` picks one.
+The menu only appears inside editable fields. If something fails where the extension cannot draw a notice (`chrome://` pages, the Chrome Web Store, PDFs), the extension icon shows a red **!** — hover it for the reason, or open the settings page, which shows the last problem.
 
-### 2. Choose the engine
+### Balanced or deep
 
-#### Option 1 — your Claude subscription, no API key (recommended)
+| Mode | What it does | Good for |
+|---|---|---|
+| **Balanced** | Organizes and clarifies what you wrote: goal, the context you gave, constraints, format. | Everyday requests — your request, just clearer. |
+| **Deep** | Also adds the *method* an experienced practitioner would use: success criteria, what to evaluate, how to handle uncertainty, an output format that forces quality, a final check. | Analysis, critique, writing that matters, code, agent tasks. |
+
+Neither mode invents facts about your situation. Trivial requests ("fix this sentence") stay short even in deep mode.
+
+### Output format
+
+By default the refined prompt is **Markdown** — `##` sections, lists, **bold** for the essentials, code fences for data, and no XML tags. Simple requests stay as plain sentences. In the settings page, **Formato do prompt › Automático** lets the destination decide instead (Claude and Claude Code may then get XML tags).
+
+### `CLAUDE.md` and `AGENTS.md`
+
+Write loose notes about a project — *"react native app with expo, run with npx expo start, tests with jest, never commit google-services.json"* — select them, and use **Gerar arquivo de instruções › CLAUDE.md** (for Claude Code) or **AGENTS.md** (for Codex and other agents), or the matching macOS Service.
+
+What comes back is the content of the file an agent reads at the start of every session: commands, structure, conventions, boundaries — **built only from what is in your notes**. Nothing is invented: anything essential that's missing (the test command, say) becomes a `TODO:` line for you to fill in.
+
+## Engines
+
+Pick one when you install; `backend/.env` is where it lives. The [install guide](INSTALL.md) walks through it — this section is the detail.
+
+
+### Option 1 — your Claude subscription, no API key (recommended)
 
 If you already pay for Claude (Pro or Max), you can use that subscription instead of buying API credits. The backend runs the official [Claude Code](https://code.claude.com) CLI in headless mode (`claude -p`), logged in as you. No API key, no card, no per-call bill: the calls count against your plan's normal usage limits and show as **US$ 0** in the cost report.
 
@@ -126,7 +141,7 @@ If the backend is installed as a macOS background service and it cannot read you
 
 </details>
 
-#### Option 2 — your own API key
+### Option 2 — your own API key
 
 Works anywhere, and does not depend on anyone's subscription policy. You pay your provider directly, per call.
 
@@ -150,148 +165,6 @@ OPENAI_API_KEY=your-key-here
 ```
 
 There is no hardcoded model: `PROMPT_COMPILER_MODEL` is always required. Every refinement is a single call, and `npm run usage -w backend` shows what yours actually cost.
-
-### 3. Start the backend
-
-Start here — any OS, nothing installed into your system, Ctrl+C to stop:
-
-```bash
-npm run dev
-```
-
-It reloads when you save a **source** file. It does **not** reload when you edit `backend/.env`: stop it with Ctrl+C and start it again.
-
-Leave `npm run dev` running for now. macOS can turn it into an always-on service later, **after step 4** — it narrows CORS to your extension's ID, and that ID does not exist until the extension is built, so installing it now would only mean running it twice.
-
-Check that it is up:
-
-```bash
-curl -s http://127.0.0.1:8787/api/health
-```
-
-You should see `"status":"ok"` and the provider you chose. If it says `misconfigured`, the message tells you which variable is missing.
-
-`ok` means the backend is configured — not that your AI engine will answer. With `claude-cli`, an expired login only shows up on the first real refinement, which is the next command.
-
-Now prove the engine itself works, without touching the browser yet:
-
-```bash
-curl -s -X POST http://127.0.0.1:8787/api/refine \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"como eu peço aumento? trabalho ha 2 anos, entrego bem mas nunca falei disso com meu gestor","target":"chatgpt","depth":"deep"}'
-```
-
-A refined prompt should come back in a few seconds. If this works, everything after it is about getting that same call to happen from a right-click.
-
-On a machine without the macOS service (Windows, Linux) and for a non-reloading run, build once and start it: `npm run build -w backend && npm start -w backend`.
-
-To remove the macOS service later: `npm run uninstall-service -w backend` (it also deletes its copy of your `.env`).
-
-### 4. Build and load the extension
-
-```bash
-npm run build -w extension
-```
-
-1. Open `chrome://extensions` (Edge: `edge://extensions`).
-2. Turn on **Developer mode**.
-3. Click **Load unpacked** and pick the `extension/dist` folder.
-
-*Load unpacked* means Chrome runs the extension straight from that folder instead of from the Web Store: nothing is verified by Google, it does not auto-update, and Chrome may ask you to confirm it after a restart. You are trusting the code in the folder — which is why it is all here to read.
-
-The settings page opens on the first install (you can reopen it by clicking the extension's icon). Check that the **Endpoint da API** is `http://127.0.0.1:8787` and click **Testar conexão** — it should say *Conectado*.
-
-> **If you changed `PORT` in `backend/.env`, put the same port here.** A mismatch is the most common cause of *Desconectado*.
-
-Not ready to touch Chrome yet? `npm run test:e2e -w extension` loads this same build into a throwaway Chromium and exercises the whole flow — selection, replacement, undo, password fields, backend errors — without touching your browser. It needs Playwright's Chromium once: `npx playwright install chromium`.
-
-**Now is the moment to install the background service**, if you want it (macOS only):
-
-```bash
-npm run install-service -w backend
-```
-
-It installs a LaunchAgent that starts at login and restarts if it crashes, **copies your `backend/.env`** to `~/Library/Application Support/PromptRefiner/` (mode 600), and **locks CORS to this extension's ID** — which is derived from the absolute path of `extension/dist`, so it had to wait for the build. Run it again whenever you edit `.env`, move the project folder, or load the extension from somewhere else. Stop `npm run dev` first; they compete for the port.
-
-Now select some text in any text field, right-click, and choose **Prompt Refiner ▸ Refinar prompt**.
-
-### 5. Optional — use it in any Mac app
-
-The backend has to be running for either of these.
-
-**macOS Services** (works in Claude, ChatGPT, TextEdit, Notes, Mail, Slack and anything else that supports Services):
-
-```bash
-npm run install-services -w desktop
-```
-
-That installs 14 Services, two of them with shortcuts:
-
-| Service | What it does |
-|---|---|
-| **Refinar prompt (Automático)** — **⌃⌥⌘R** | Balanced mode; destination detected from the frontmost app (Claude app → Claude, ChatGPT app → ChatGPT, Gemini web app → Gemini, everything else → generic) |
-| **Refinar prompt profundo (Automático)** — **⌃⌥⌘P** | Deep mode, same detection |
-| Refinar prompt \[profundo] para ChatGPT / Claude / Gemini / Codex / Claude Code | A fixed destination, balanced or deep |
-| **Gerar CLAUDE.md** / **Gerar AGENTS.md** | Turns your notes into an agent instruction file |
-
-Use them with the shortcut, with right-click › **Services**, or from the app's own menu (*Claude › Services*, for example). Undo with **⌘Z** in the app. If the items don't appear in an app that was already open, quit and reopen it. Shortcuts can be changed in **System Settings › Keyboard › Keyboard Shortcuts › Services › Text**. Remove everything with `npm run uninstall-services -w desktop`.
-
-**Double tap on ⌥ Option** (a tiny ✦ menu bar app):
-
-```bash
-npm run install-hotkey -w desktop
-```
-
-| Gesture | Action |
-|---|---|
-| **⌥⌥** — a quick double tap on Option | Refine (Automatic), balanced |
-| **⇧ + ⌥⌥** — hold Shift, double tap Option | Refine (Automatic), deep |
-
-On first run, allow **Prompt Refiner** in **System Settings › Privacy & Security › Accessibility**. The app starts at login; pause or quit it from the menu bar icon. Normal ⌥ shortcuts (⌥←, for instance) don't trigger it. Remove it with `npm run uninstall-hotkey -w desktop`.
-
-It works by copying the selection (⌘C, saving and restoring your clipboard), calling the local backend, showing a floating notice, and — **only on success**, and only if the same app is still in front — pasting the result (⌘V). It watches modifier keys only, to recognize the gesture; it never reads or stores what you type.
-
-Three things to know about it:
-
-- **Rebuilding the app invalidates the Accessibility permission.** It is signed ad hoc, so every build is "a different app" to macOS: you have to **remove it (−) and add it again** in Accessibility — toggling it off and on is not enough.
-- **The Claude desktop app uses ⌥⌥ too**, for its own quick entry. To use ⌥⌥ here, turn that off in *Claude › Settings › System*.
-- ⌘C/⌘V are sent by key position: fine on US and ABNT2 layouts, not on Dvorak-style ones (use the Services there).
-
-## How to use it
-
-### In the browser
-
-1. Write in any text field — ChatGPT, Claude, Gemini, or any `<input>`, `<textarea>` or rich editor.
-2. Select the part you want refined.
-3. Right-click inside the field → **Prompt Refiner**, and pick one of:
-   - **Refinar prompt** — balanced
-   - **Refinar prompt (profundo)** — deep
-   - **Gerar arquivo de instruções** — a `CLAUDE.md` or `AGENTS.md`
-4. Choose the destination. **✨ Automático** reads it from the site: `chatgpt.com` and `chat.openai.com` → ChatGPT, `claude.ai` → Claude, `gemini.google.com` and `aistudio.google.com` → Gemini, anything else → a generic prompt. Codex and Claude Code are never guessed — pick them yourself.
-5. The selection is replaced, and a notice offers **Desfazer** (undo).
-
-**Keyboard shortcut: Alt+Shift+R** refines the selection using the default destination and depth from the settings page. Change the key at `chrome://extensions/shortcuts`.
-
-The menu only appears inside editable fields. If something fails where the extension cannot draw a notice (`chrome://` pages, the Chrome Web Store, PDFs), the extension icon shows a red **!** — hover it for the reason, or open the settings page, which shows the last problem.
-
-### Balanced or deep
-
-| Mode | What it does | Good for |
-|---|---|---|
-| **Balanced** | Organizes and clarifies what you wrote: goal, the context you gave, constraints, format. | Everyday requests — your request, just clearer. |
-| **Deep** | Also adds the *method* an experienced practitioner would use: success criteria, what to evaluate, how to handle uncertainty, an output format that forces quality, a final check. | Analysis, critique, writing that matters, code, agent tasks. |
-
-Neither mode invents facts about your situation. Trivial requests ("fix this sentence") stay short even in deep mode.
-
-### Output format
-
-By default the refined prompt is **Markdown** — `##` sections, lists, **bold** for the essentials, code fences for data, and no XML tags. Simple requests stay as plain sentences. In the settings page, **Formato do prompt › Automático** lets the destination decide instead (Claude and Claude Code may then get XML tags).
-
-### `CLAUDE.md` and `AGENTS.md`
-
-Write loose notes about a project — *"react native app with expo, run with npx expo start, tests with jest, never commit google-services.json"* — select them, and use **Gerar arquivo de instruções › CLAUDE.md** (for Claude Code) or **AGENTS.md** (for Codex and other agents), or the matching macOS Service.
-
-What comes back is the content of the file an agent reads at the start of every session: commands, structure, conventions, boundaries — **built only from what is in your notes**. Nothing is invented: anything essential that's missing (the test command, say) becomes a `TODO:` line for you to fill in.
 
 ## Settings
 

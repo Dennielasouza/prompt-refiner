@@ -44,47 +44,62 @@ O motor que *refina* e o destino para o qual você está *escrevendo* são indep
 
 ## Instalação
 
-**Com pressa?** Se você já paga o Claude e tem o [Claude Code](https://code.claude.com) logado, é só isto:
+**→ O passo a passo está em [INSTALACAO.pt-BR.md](INSTALACAO.pt-BR.md).** São dois comandos, uns cinco minutos:
 
 ```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git && cd prompt-refiner
-npm install
-cp backend/.env.example backend/.env     # já vem configurado na sua assinatura do Claude
-npm run dev                              # deixe rodando
+git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner
 ```
-
-Depois, em outro terminal, confira se ele responde e refine alguma coisa:
 
 ```bash
-curl -s http://127.0.0.1:8787/api/health
-curl -s -X POST http://127.0.0.1:8787/api/refine \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"como eu peço aumento? trabalho ha 2 anos, entrego bem mas nunca falei disso com meu gestor","target":"chatgpt","depth":"deep"}'
+cd ~/prompt-refiner && ./instalar.sh
 ```
 
-O que volta é aquela pergunta solta virada em um prompt que diz o que cobrir e que, como você não disse setor nem valores, manda o destino não presumir nada disso. É esse o produto inteiro. Tudo o que vem abaixo é a mesma coisa explicada com calma, mais a extensão do navegador e a integração com o Mac.
+O instalador cuida das dependências, da configuração, da extensão, do backend e dos atalhos do Mac, e no fim refina uma frase de verdade para você ver funcionando. Duas coisas continuam manuais, porque o Chrome e o macOS só aceitam pela interface deles: carregar a extensão e liberar a Acessibilidade do gesto ⌥⌥. O [guia de instalação](INSTALACAO.pt-BR.md) cobre as duas, e também o que fazer quando algo dá errado.
 
-### 1. Clone e instale
+O resto deste README é referência: o que cada configuração faz, como o motor funciona e como mexer no código.
 
-```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git
-cd prompt-refiner
-npm install
-```
+## Como usar
 
-Depois crie o seu arquivo de configuração a partir do exemplo:
+### No navegador
 
-```bash
-cp backend/.env.example backend/.env
-```
+1. Escreva em qualquer campo de texto — ChatGPT, Claude, Gemini ou qualquer `<input>`, `<textarea>` ou editor rico.
+2. Selecione o trecho que quer refinar.
+3. Clique com o botão direito dentro do campo → **Prompt Refiner**, e escolha:
+   - **Refinar prompt** — equilibrado
+   - **Refinar prompt (profundo)** — profundo
+   - **Gerar arquivo de instruções** — um `CLAUDE.md` ou `AGENTS.md`
+4. Escolha o destino. O **✨ Automático** descobre pelo site: `chatgpt.com` e `chat.openai.com` → ChatGPT, `claude.ai` → Claude, `gemini.google.com` e `aistudio.google.com` → Gemini, qualquer outro → prompt genérico. Codex e Claude Code nunca são deduzidos — escolha você.
+5. A seleção é substituída e um aviso oferece **Desfazer**.
 
-É no `backend/.env` que o motor é configurado. Ele está no `.gitignore` — nunca versione esse arquivo.
+**Atalho de teclado: Alt+Shift+R** refina a seleção com o destino e a profundidade padrão da página de configurações. A tecla pode ser trocada em `chrome://extensions/shortcuts`.
 
-> Os comandos abaixo trazem `-w backend` ou `-w extension`. Isso é o npm dizendo "rode dentro daquele workspace": o repositório tem três (`backend`, `extension`, `desktop`) e o `-w` escolhe um.
+O menu só aparece dentro de campos editáveis. Se algo falhar onde a extensão não consegue desenhar um aviso (páginas `chrome://`, a Chrome Web Store, PDFs), o ícone da extensão ganha um **!** vermelho — passe o mouse para ver o motivo, ou abra a página de configurações, que mostra o último problema.
 
-### 2. Escolha o motor
+### Equilibrado ou profundo
 
-#### Opção 1 — a sua assinatura do Claude, sem chave de API (recomendada)
+| Modo | O que faz | Bom para |
+|---|---|---|
+| **Equilibrado** | Organiza e esclarece o que você escreveu: objetivo, o contexto que você deu, restrições, formato. | Pedidos do dia a dia — o seu pedido, só que claro. |
+| **Profundo** | Acrescenta também o *método* de quem tem experiência: critério de sucesso, o que avaliar, como tratar a incerteza, um formato de saída que força qualidade, uma checagem final. | Análises, críticas, textos que importam, código, tarefas de agentes. |
+
+Nenhum dos dois modos inventa fatos sobre a sua situação. Pedidos triviais ("corrige essa frase") continuam curtos até no modo profundo.
+
+### Formato do resultado
+
+Por padrão, o prompt refinado vem em **Markdown** — seções com `##`, listas, **negrito** no essencial, blocos de código para dados, e nenhuma tag XML. Pedidos simples continuam em frases normais. Na página de configurações, **Formato do prompt › Automático** deixa o destino decidir (o Claude e o Claude Code podem então receber tags XML).
+
+### `CLAUDE.md` e `AGENTS.md`
+
+Escreva notas soltas sobre um projeto — *"app em react native com expo, roda com npx expo start, testes com jest, nunca commitar o google-services.json"* — selecione e use **Gerar arquivo de instruções › CLAUDE.md** (para o Claude Code) ou **AGENTS.md** (para o Codex e outros agentes), ou o Serviço correspondente no Mac.
+
+O que volta é o conteúdo do arquivo que um agente lê no começo de cada sessão: comandos, estrutura, convenções, limites — **montado só com o que está nas suas notas**. Nada é inventado: o que faltar de essencial (o comando de testes, por exemplo) vira uma linha `TODO:` para você completar.
+
+## Motores
+
+Você escolhe um na instalação, e ele fica no `backend/.env`. O [guia de instalação](INSTALACAO.pt-BR.md) conduz o passo; esta seção é o detalhe.
+
+
+### Opção 1 — a sua assinatura do Claude, sem chave de API (recomendada)
 
 Se você já paga o Claude (Pro ou Max), pode usar essa assinatura em vez de comprar créditos de API. O backend roda o [Claude Code](https://code.claude.com) oficial em modo sem interface (`claude -p`), logado como você. Sem chave de API, sem cartão, sem conta por chamada: as chamadas contam nos limites normais de uso do seu plano e aparecem como **US$ 0** no relatório de custo.
 
@@ -126,7 +141,7 @@ Se o backend estiver instalado como serviço no macOS e não conseguir ler o seu
 
 </details>
 
-#### Opção 2 — a sua própria chave de API
+### Opção 2 — a sua própria chave de API
 
 Funciona em qualquer lugar e não depende da política de assinatura de ninguém. Você paga ao seu provedor, por chamada.
 
@@ -148,148 +163,6 @@ OPENAI_API_KEY=sua-chave-aqui
 ```
 
 Não há modelo fixo no código: `PROMPT_COMPILER_MODEL` é sempre obrigatório. Cada refinamento é uma única chamada, e `npm run usage -w backend` mostra quanto os seus custaram de verdade.
-
-### 3. Inicie o backend
-
-Comece por aqui — funciona em qualquer sistema, não instala nada no seu computador, e para com Ctrl+C:
-
-```bash
-npm run dev
-```
-
-Ele recarrega quando você salva um arquivo **de código**. Ele **não** recarrega quando você edita o `backend/.env`: pare com Ctrl+C e inicie de novo.
-
-Deixe o `npm run dev` rodando por enquanto. O macOS pode transformá-lo em serviço sempre ligado depois, **no passo 4** — ele restringe o CORS ao ID da sua extensão, e esse ID só existe depois que a extensão é gerada, então instalar agora significaria rodar o comando duas vezes.
-
-Para conferir se está no ar:
-
-```bash
-curl -s http://127.0.0.1:8787/api/health
-```
-
-Deve aparecer `"status":"ok"` e o provedor que você escolheu. Se aparecer `misconfigured`, a mensagem diz qual variável está faltando.
-
-`ok` quer dizer que o backend está configurado — não que o seu motor de IA vai responder. Com o `claude-cli`, um login vencido só aparece no primeiro refinamento de verdade, que é o comando seguinte.
-
-Agora prove que o motor funciona, sem precisar mexer no navegador ainda:
-
-```bash
-curl -s -X POST http://127.0.0.1:8787/api/refine \
-  -H 'Content-Type: application/json' \
-  -d '{"text":"como eu peço aumento? trabalho ha 2 anos, entrego bem mas nunca falei disso com meu gestor","target":"chatgpt","depth":"deep"}'
-```
-
-Em alguns segundos deve voltar um prompt refinado. Se isso funcionou, todo o resto é só fazer essa mesma chamada acontecer a partir de um clique com o botão direito.
-
-Numa máquina sem o serviço do macOS (Windows, Linux) e para rodar sem o modo de recarregar, gere o build uma vez e inicie: `npm run build -w backend && npm start -w backend`.
-
-Para remover o serviço do macOS depois: `npm run uninstall-service -w backend` (ele apaga também a cópia do seu `.env`).
-
-### 4. Gere e carregue a extensão
-
-```bash
-npm run build -w extension
-```
-
-1. Abra `chrome://extensions` (no Edge: `edge://extensions`).
-2. Ative o **Modo do desenvolvedor**.
-3. Clique em **Carregar sem compactação** e escolha a pasta `extension/dist`.
-
-*Carregar sem compactação* quer dizer que o Chrome roda a extensão direto daquela pasta, em vez de pegá-la na loja: nada é verificado pelo Google, ela não se atualiza sozinha, e o Chrome pode pedir confirmação depois de reiniciar. Você está confiando no código daquela pasta — e é por isso que ele está todo aqui para ser lido.
-
-A página de configurações abre na primeira instalação (para reabrir, clique no ícone da extensão). Confira se o **Endpoint da API** é `http://127.0.0.1:8787` e clique em **Testar conexão** — deve aparecer *Conectado*.
-
-> **Se você mudou a `PORT` no `backend/.env`, coloque a mesma porta aqui.** Divergência entre as duas é a causa mais comum de *Desconectado*.
-
-Ainda não quer mexer no Chrome? O `npm run test:e2e -w extension` carrega essa mesma extensão num Chromium descartável e exercita o fluxo inteiro — seleção, substituição, desfazer, campo de senha, erro do backend — sem tocar no seu navegador. Ele precisa do Chromium do Playwright uma vez: `npx playwright install chromium`.
-
-**Agora é a hora de instalar o serviço de segundo plano**, se você quiser (só no macOS):
-
-```bash
-npm run install-service -w backend
-```
-
-Ele instala um serviço que inicia junto com o computador e volta sozinho se cair, **copia o seu `backend/.env`** para `~/Library/Application Support/PromptRefiner/` (com permissão 600) e **prende o CORS ao ID desta extensão** — que vem do caminho completo da pasta `extension/dist`, por isso precisou esperar o build. Rode de novo sempre que editar o `.env`, mover a pasta do projeto ou carregar a extensão de outro lugar. Pare o `npm run dev` antes; os dois disputam a porta.
-
-Agora selecione um texto em qualquer campo, clique com o botão direito e escolha **Prompt Refiner ▸ Refinar prompt**.
-
-### 5. Opcional — use em qualquer app do Mac
-
-Nos dois casos abaixo, o backend precisa estar rodando.
-
-**Serviços do macOS** (funcionam no Claude, no ChatGPT, no Editor de Texto, no Notas, no Mail, no Slack e em tudo o mais que aceite Serviços):
-
-```bash
-npm run install-services -w desktop
-```
-
-Isso instala 14 Serviços, dois deles com atalho:
-
-| Serviço | O que faz |
-|---|---|
-| **Refinar prompt (Automático)** — **⌃⌥⌘R** | Modo equilibrado; destino detectado pelo app em primeiro plano (app Claude → Claude, app ChatGPT → ChatGPT, web app do Gemini → Gemini, todo o resto → genérico) |
-| **Refinar prompt profundo (Automático)** — **⌃⌥⌘P** | Modo profundo, mesma detecção |
-| Refinar prompt \[profundo] para ChatGPT / Claude / Gemini / Codex / Claude Code | Destino fixo, equilibrado ou profundo |
-| **Gerar CLAUDE.md** / **Gerar AGENTS.md** | Transforma as suas notas num arquivo de instruções para agentes |
-
-Use pelo atalho, pelo botão direito › **Serviços** ou pelo menu do próprio app (*Claude › Serviços*, por exemplo). Para desfazer, **⌘Z** no app. Se os itens não aparecerem num app que já estava aberto, feche e abra o app. Os atalhos podem ser trocados em **Ajustes do Sistema › Teclado › Atalhos de Teclado › Serviços › Texto**. Para remover tudo: `npm run uninstall-services -w desktop`.
-
-**Toque duplo no ⌥ Option** (um app ✦ pequeno na barra de menu):
-
-```bash
-npm run install-hotkey -w desktop
-```
-
-| Gesto | Ação |
-|---|---|
-| **⌥⌥** — toque duplo rápido no Option | Refinar (Automático), equilibrado |
-| **⇧ + ⌥⌥** — segure Shift e toque duas vezes no Option | Refinar (Automático), profundo |
-
-Na primeira vez, autorize o **Prompt Refiner** em **Ajustes do Sistema › Privacidade e Segurança › Acessibilidade**. O app abre sozinho no login; pela barra de menu dá para pausar ou sair. Atalhos normais com ⌥ (⌥←, por exemplo) não disparam o gesto. Para remover: `npm run uninstall-hotkey -w desktop`.
-
-Ele funciona copiando a seleção (⌘C, guardando e devolvendo a sua área de transferência), chamando o backend local, mostrando um aviso flutuante e — **só se der certo**, e só se o mesmo app ainda estiver em primeiro plano — colando o resultado (⌘V). Ele observa apenas as teclas modificadoras, para reconhecer o gesto; nunca lê nem guarda o que você digita.
-
-Três coisas para saber sobre ele:
-
-- **Recompilar o app invalida a permissão de Acessibilidade.** A assinatura é ad hoc, então cada build é "outro app" para o macOS: é preciso **removê-lo (−) e adicioná-lo de novo** em Acessibilidade — desligar e ligar não resolve.
-- **O app Claude também usa ⌥⌥**, para a entrada rápida dele. Para usar ⌥⌥ aqui, desative isso em *Claude › Configurações › Sistema*.
-- O ⌘C/⌘V é enviado pela posição das teclas: funciona em layouts US e ABNT2, não em Dvorak (nesse caso, use os Serviços).
-
-## Como usar
-
-### No navegador
-
-1. Escreva em qualquer campo de texto — ChatGPT, Claude, Gemini ou qualquer `<input>`, `<textarea>` ou editor rico.
-2. Selecione o trecho que quer refinar.
-3. Clique com o botão direito dentro do campo → **Prompt Refiner**, e escolha:
-   - **Refinar prompt** — equilibrado
-   - **Refinar prompt (profundo)** — profundo
-   - **Gerar arquivo de instruções** — um `CLAUDE.md` ou `AGENTS.md`
-4. Escolha o destino. O **✨ Automático** descobre pelo site: `chatgpt.com` e `chat.openai.com` → ChatGPT, `claude.ai` → Claude, `gemini.google.com` e `aistudio.google.com` → Gemini, qualquer outro → prompt genérico. Codex e Claude Code nunca são deduzidos — escolha você.
-5. A seleção é substituída e um aviso oferece **Desfazer**.
-
-**Atalho de teclado: Alt+Shift+R** refina a seleção com o destino e a profundidade padrão da página de configurações. A tecla pode ser trocada em `chrome://extensions/shortcuts`.
-
-O menu só aparece dentro de campos editáveis. Se algo falhar onde a extensão não consegue desenhar um aviso (páginas `chrome://`, a Chrome Web Store, PDFs), o ícone da extensão ganha um **!** vermelho — passe o mouse para ver o motivo, ou abra a página de configurações, que mostra o último problema.
-
-### Equilibrado ou profundo
-
-| Modo | O que faz | Bom para |
-|---|---|---|
-| **Equilibrado** | Organiza e esclarece o que você escreveu: objetivo, o contexto que você deu, restrições, formato. | Pedidos do dia a dia — o seu pedido, só que claro. |
-| **Profundo** | Acrescenta também o *método* de quem tem experiência: critério de sucesso, o que avaliar, como tratar a incerteza, um formato de saída que força qualidade, uma checagem final. | Análises, críticas, textos que importam, código, tarefas de agentes. |
-
-Nenhum dos dois modos inventa fatos sobre a sua situação. Pedidos triviais ("corrige essa frase") continuam curtos até no modo profundo.
-
-### Formato do resultado
-
-Por padrão, o prompt refinado vem em **Markdown** — seções com `##`, listas, **negrito** no essencial, blocos de código para dados, e nenhuma tag XML. Pedidos simples continuam em frases normais. Na página de configurações, **Formato do prompt › Automático** deixa o destino decidir (o Claude e o Claude Code podem então receber tags XML).
-
-### `CLAUDE.md` e `AGENTS.md`
-
-Escreva notas soltas sobre um projeto — *"app em react native com expo, roda com npx expo start, testes com jest, nunca commitar o google-services.json"* — selecione e use **Gerar arquivo de instruções › CLAUDE.md** (para o Claude Code) ou **AGENTS.md** (para o Codex e outros agentes), ou o Serviço correspondente no Mac.
-
-O que volta é o conteúdo do arquivo que um agente lê no começo de cada sessão: comandos, estrutura, convenções, limites — **montado só com o que está nas suas notas**. Nada é inventado: o que faltar de essencial (o comando de testes, por exemplo) vira uma linha `TODO:` para você completar.
 
 ## Configuração
 
