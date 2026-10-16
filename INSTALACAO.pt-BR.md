@@ -37,6 +37,14 @@ Abra o app **Terminal**, cole a linha abaixo e aperte Enter:
 curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
+Esse comando baixa um script da internet e roda. Vale saber o que ele faz antes: são **6 etapas** — conferir o Node, baixar as peças, criar a configuração, gerar a extensão, ligar o backend e integrar com o Mac. Ele **não pede senha** e **não escreve nada fora da sua pasta de usuário**. Para ler antes de rodar:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | less
+```
+
+(aperte `q` para sair)
+
 É só isso. Ele baixa o projeto, instala tudo, liga o backend e termina **refinando uma frase de verdade** para você ver funcionando. Mostra 6 etapas numeradas pelo caminho.
 
 > **Copiando:** passe o mouse sobre o bloco cinza e use o **botão de copiar** no canto. As crases ``` que aparecem na tela **não fazem parte do comando**.
@@ -63,6 +71,10 @@ Isso o instalador não consegue fazer: o Chrome só aceita no mouse.
 2. Ligue o **Modo do desenvolvedor**, no canto superior direito
 3. Clique em **Carregar sem compactação**
 4. Escolha a pasta `~/prompt-refiner/extension/dist`
+
+> **Não acha a pasta na janela do Chrome?** Aperte **⌘⇧G**, cole `~/prompt-refiner/extension/dist` e dê Enter. O instalador também imprime o caminho exato no fim.
+>
+> Ela só existe **depois** que o instalador roda — é ele que a cria.
 
 *Carregar sem compactação* quer dizer que o Chrome roda a extensão direto dessa pasta, em vez de pegá-la na loja. Nada é verificado pelo Google e ela não se atualiza sozinha — você está confiando no código dessa pasta, que está todo aberto para leitura.
 

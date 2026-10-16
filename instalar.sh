@@ -121,33 +121,54 @@ ok "Pronta em $(pwd)/extension/dist"
 
 # --- 5. Backend --------------------------------------------------------------
 passo "5/6  Ligando o backend"
-if $MACOS && ! $APENAS_BACKEND; then
+
+# Antes de ligar qualquer coisa: alguém já está nessa porta? Se estiver, dizer a verdade —
+# um teste que encontra OUTRO servidor e dá "ok" é pior do que um teste que falha.
+JA_NO_AR=$(curl -sS -m 2 "http://127.0.0.1:${PORTA}/api/health" 2>/dev/null || true)
+NOSSO_PID=""
+if [ -n "$JA_NO_AR" ]; then
+  aviso "Já havia um backend respondendo na porta ${PORTA}; vou usar esse em vez de ligar outro."
+  SAUDE="$JA_NO_AR"
+elif $MACOS && ! $APENAS_BACKEND; then
   if ! npm run install-service -w backend >/tmp/pr-service.log 2>&1; then
     tail -20 /tmp/pr-service.log >&2
     parar "Não consegui instalar o backend como serviço." "O registro completo está em /tmp/pr-service.log."
   fi
   ok "Instalado como serviço: liga sozinho com o Mac e volta se cair"
 else
-  aviso "Sem instalar serviço. Deixe o backend rodando numa aba do terminal com: npm run dev"
+  # Fora do macOS (ou com --so-backend) não há serviço. Subimos o backend aqui só para provar
+  # que funciona, e desligamos no fim — senão a pessoa fica com um processo solto sem saber.
+  if ! npm run build -w backend >/tmp/pr-backend-build.log 2>&1; then
+    tail -20 /tmp/pr-backend-build.log >&2
+    parar "Não consegui preparar o backend." "O registro completo está em /tmp/pr-backend-build.log."
+  fi
+  (cd backend && node dist/index.js >/tmp/pr-backend.log 2>&1 &
+   echo $! > /tmp/pr-backend.pid)
+  NOSSO_PID=$(cat /tmp/pr-backend.pid 2>/dev/null || true)
+  ok "Backend iniciado aqui, só para o teste"
 fi
 
-printf '  aguardando responder'
-SAUDE=""
-for _ in $(seq 1 20); do
-  SAUDE=$(curl -sS -m 2 "http://127.0.0.1:${PORTA}/api/health" 2>/dev/null || true)
-  [ -n "$SAUDE" ] && break
-  printf '.'
-  sleep 1
-done
-echo
+if [ -z "${SAUDE:-}" ]; then
+  printf '  aguardando responder'
+  SAUDE=""
+  for _ in $(seq 1 20); do
+    SAUDE=$(curl -sS -m 2 "http://127.0.0.1:${PORTA}/api/health" 2>/dev/null || true)
+    [ -n "$SAUDE" ] && break
+    printf '.'
+    sleep 1
+  done
+  echo
+fi
 if [ -z "$SAUDE" ]; then
+  [ -n "$NOSSO_PID" ] && kill "$NOSSO_PID" 2>/dev/null
   parar "O backend não respondeu na porta ${PORTA}." \
     "Se outro programa estiver usando essa porta, mude PORT em backend/.env e rode este script de novo." \
-    "Para ver o que aconteceu: tail -20 ~/Library/Logs/PromptRefiner/backend.log"
+    "Para ver o que aconteceu: tail -20 /tmp/pr-backend.log"
 fi
 case "$SAUDE" in
   *'"status":"ok"'*) ok "Backend no ar em http://127.0.0.1:${PORTA}" ;;
-  *) parar "O backend subiu, mas está mal configurado." "Ele respondeu: $SAUDE" ;;
+  *) [ -n "$NOSSO_PID" ] && kill "$NOSSO_PID" 2>/dev/null
+     parar "O backend subiu, mas está mal configurado." "Ele respondeu: $SAUDE" ;;
 esac
 
 # --- 6. Integração com o Mac -------------------------------------------------
@@ -187,6 +208,13 @@ if [ -n "$REFINADO" ]; then
 else
   aviso "O refinamento de teste não voltou. O backend está no ar, mas algo barrou a chamada."
   aviso "Veja o motivo em: tail -20 ~/Library/Logs/PromptRefiner/backend.log"
+fi
+
+# --- Desliga o que nós mesmos subimos ----------------------------------------
+if [ -n "${NOSSO_PID:-}" ]; then
+  kill "$NOSSO_PID" 2>/dev/null
+  rm -f /tmp/pr-backend.pid
+  aviso "Desliguei o backend de teste. Para usar o plugin, deixe-o rodando com: npm run dev"
 fi
 
 # --- O que falta -------------------------------------------------------------

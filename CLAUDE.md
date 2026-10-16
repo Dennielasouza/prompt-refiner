@@ -53,7 +53,7 @@ Extension: `npm run build -w extension` → reload `extension/dist` in `chrome:/
 - Answer economy (`<answer_economy>`): every request in the refined prompt becomes content the destination writes. Method that changes HOW the task is done is welcome; extra WHAT (sub-topic lists, examples, tips, "what would change the answer") only when asked. "Return only X" is for transformations of given text, not for new content. Measured on 2026-10-14 (blind answer test, 10 cases): answers −15% (balanced) and −32% (deep) with equal or better scores.
 - Core rule: **never invent facts** about the person's situation (including tone/style preferences they didn't express); deep mode may add **method** (criteria, process, format, verification) from `playbooks.ts`, fully only at complexity ≥ 3 (at 1–2 it behaves like balanced plus at most one method line). Trivial requests stay short.
 - The structured output has no free-text fields besides `refinedPrompt` (warnings are short codes) — every output token costs time and money.
-- When changing the instruction: bump `COMPILER_VERSION`, run tests and the eval, and redeploy (`npm run install-service -w backend`); check the version with `curl -s http://127.0.0.1:8787/api/health`.
+- When changing the instruction: bump `COMPILER_VERSION`, run tests and the eval, and redeploy (`npm run install-service -w backend`); check the version with `curl -sS http://127.0.0.1:8787/api/health`.
 - Keep in sync: `shared/api.ts` ↔ `desktop/src/apps.ts` ↔ `desktop/helper/RefineCore.swift` (Swift tests flag drift).
 
 ## How to verify a change

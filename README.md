@@ -329,7 +329,7 @@ npm run usage -w backend        # cost report (needs the macOS service — see b
 ### How to verify a change
 
 - **Backend:** `npm test -w backend && npm run typecheck -w backend`. Engine changes also need the eval.
-- **Changing the refiner instruction** (`backend/src/engine/instruction.ts`): bump `COMPILER_VERSION`, run the tests and the eval, reinstall the service, and confirm the version with `curl -s http://127.0.0.1:8787/api/health`.
+- **Changing the refiner instruction** (`backend/src/engine/instruction.ts`): bump `COMPILER_VERSION`, run the tests and the eval, reinstall the service, and confirm the version with `curl -sS http://127.0.0.1:8787/api/health`.
 - **Extension:** unit tests, `npm run test:e2e -w extension` (run it twice), and a build. Delete `extension/dist-e2e` afterwards. After rebuilding, click ↻ on the extension's card in `chrome://extensions`; if you forget, the extension detects the mismatch on next use and reloads itself.
 - **Desktop:** `npm test -w desktop` (includes the Swift tests).
 - **Installed backend:** `launchctl print gui/$(id -u)/com.promptrefiner.backend`, with the log at `~/Library/Logs/PromptRefiner/backend.log`.

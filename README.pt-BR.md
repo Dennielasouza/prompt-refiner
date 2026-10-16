@@ -327,7 +327,7 @@ npm run usage -w backend        # relatório de custo (precisa do serviço do ma
 ### Como verificar uma mudança
 
 - **Backend:** `npm test -w backend && npm run typecheck -w backend`. Mudanças no motor pedem também o eval.
-- **Mudou a instrução do refinador** (`backend/src/engine/instruction.ts`): incremente o `COMPILER_VERSION`, rode os testes e o eval, reinstale o serviço e confirme a versão com `curl -s http://127.0.0.1:8787/api/health`.
+- **Mudou a instrução do refinador** (`backend/src/engine/instruction.ts`): incremente o `COMPILER_VERSION`, rode os testes e o eval, reinstale o serviço e confirme a versão com `curl -sS http://127.0.0.1:8787/api/health`.
 - **Extensão:** unitários, `npm run test:e2e -w extension` (rode duas vezes) e o build. Apague o `extension/dist-e2e` depois. Depois de um novo build, clique em ↻ no card da extensão em `chrome://extensions`; se esquecer, a extensão percebe a diferença no próximo uso e se recarrega sozinha.
 - **Desktop:** `npm test -w desktop` (inclui os testes em Swift).
 - **Backend instalado:** `launchctl print gui/$(id -u)/com.promptrefiner.backend`, com o log em `~/Library/Logs/PromptRefiner/backend.log`.

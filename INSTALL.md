@@ -39,6 +39,14 @@ Open the **Terminal** app, paste the line below and press Enter:
 curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
+That command downloads a script from the internet and runs it. Worth knowing what it does first: **6 stages** — check Node, fetch dependencies, create the configuration, build the extension, start the backend, integrate with the Mac. It **never asks for your password** and **writes nothing outside your home folder**. To read it before running it:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | less
+```
+
+(press `q` to quit)
+
 That's it. It downloads the project, installs everything, starts the backend and finishes by **refining a real sentence** so you can see it work. Six numbered stages along the way.
 
 > **Copying:** hover over the grey block and use the **copy button** in its corner. The ``` backticks on screen are **not part of the command**.
@@ -65,6 +73,10 @@ The installer cannot do this one: Chrome only accepts it through the interface.
 2. Turn on **Developer mode**, top right
 3. Click **Load unpacked**
 4. Choose the folder `~/prompt-refiner/extension/dist`
+
+> **Can't find the folder in Chrome's window?** Press **⌘⇧G**, paste `~/prompt-refiner/extension/dist` and hit Enter. The installer also prints the exact path at the end.
+>
+> It only exists **after** the installer has run — the installer creates it.
 
 *Load unpacked* means Chrome runs the extension straight from that folder instead of from the Web Store. Nothing is verified by Google and it does not auto-update — you are trusting the code in that folder, which is all here to read.
 
