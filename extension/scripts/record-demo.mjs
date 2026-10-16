@@ -30,8 +30,7 @@ const TMP = join(root, ".demo-tmp");
 const ENDPOINT = process.env.DEMO_ENDPOINT ?? "http://127.0.0.1:8788";
 const TARGET = process.env.DEMO_TARGET ?? "chatgpt";
 const MESSY =
-  process.env.DEMO_TEXT ??
-  "preciso escrever um email pro meu chefe pedindo pra trabalhar remoto na sexta, sem parecer folgado";
+  process.env.DEMO_TEXT ?? "preciso escrever um email pro meu chefe pedindo pra trabalhar remoto na sexta, sem parecer folgado";
 
 const VIEWPORT = { width: 1000, height: 620 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -65,10 +64,7 @@ const context = await chromium.launchPersistentContext(join(TMP, "profile"), {
   args: [`--disable-extensions-except=${EXT_DIR}`, `--load-extension=${EXT_DIR}`, "--hide-scrollbars"],
 });
 const sw = context.serviceWorkers()[0] ?? (await context.waitForEvent("serviceworker"));
-await sw.evaluate(
-  ([endpoint, target]) => chrome.storage.sync.set({ endpoint, defaultTarget: target }),
-  [ENDPOINT, TARGET],
-);
+await sw.evaluate(([endpoint, target]) => chrome.storage.sync.set({ endpoint, defaultTarget: target }), [ENDPOINT, TARGET]);
 
 const page = await context.newPage();
 await page.goto(pageUrl);
@@ -89,10 +85,7 @@ await wait(1100);
 
 // 3. Refine (same entry point the context menu calls).
 const tabId = await sw.evaluate(async (url) => (await chrome.tabs.query({ url: `${url}*` }))[0].id, pageUrl);
-await sw.evaluate(
-  ([id, target]) => globalThis.__promptRefinerTest.runRefinement(id, 0, target, "balanced"),
-  [tabId, TARGET],
-);
+await sw.evaluate(([id, target]) => globalThis.__promptRefinerTest.runRefinement(id, 0, target, "balanced"), [tabId, TARGET]);
 
 // 4. Let the result and the "Desfazer" toast breathe.
 await page.waitForFunction(() => document.getElementById("composer").value.length > 160, null, { timeout: 60_000 });
@@ -110,7 +103,11 @@ await context.close();
 fixtures.close();
 
 // 5. webm → gif, two-pass palette so the text stays readable.
-const webm = join(TMP, "video", readdirSync(join(TMP, "video")).find((f) => f.endsWith(".webm")));
+const webm = join(
+  TMP,
+  "video",
+  readdirSync(join(TMP, "video")).find((f) => f.endsWith(".webm")),
+);
 const palette = join(TMP, "palette.png");
 const gif = join(OUT_DIR, "demo.gif");
 const filters = "fps=11,scale=900:-1:flags=lanczos";
