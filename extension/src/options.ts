@@ -24,7 +24,7 @@ function readEndpoint(): string | null {
   endpointInput.setAttribute("aria-invalid", String(!endpoint));
   if (!endpoint) {
     endpointHint.textContent =
-      "Informe uma URL válida: http só no seu computador (ex.: http://localhost:8787); fora dele, use https.";
+      "Informe uma URL válida: http só no seu computador (ex.: http://127.0.0.1:8787); fora dele, use https.";
   } else {
     endpointHint.textContent = DEFAULT_HINT;
   }

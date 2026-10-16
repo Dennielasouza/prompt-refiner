@@ -10,7 +10,9 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  endpoint: "http://localhost:8787",
+  // 127.0.0.1, not "localhost": the backend binds 127.0.0.1, and a host that resolves
+  // localhost to ::1 first would fail to connect with no useful error.
+  endpoint: "http://127.0.0.1:8787",
   defaultTarget: "auto",
   defaultDepth: "balanced",
   format: "markdown",
