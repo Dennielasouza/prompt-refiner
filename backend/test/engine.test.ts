@@ -18,7 +18,7 @@ import { COMPILER_OUTPUT_SCHEMA } from "../src/engine/schema.js";
 import { resolveTarget, targetFromHostname } from "../src/engine/targets.js";
 import { DEPTHS, FORMATS, TARGETS, TASK_TYPES } from "../src/engine/types.js";
 import { ProviderError } from "../src/providers/types.js";
-import { fakeProvider, validOutput } from "./helpers.js";
+import { fakeProvider, keepingEventLoopAlive, validOutput } from "./helpers.js";
 
 describe("target selection", () => {
   it("maps known hostnames in auto mode", () => {
@@ -383,9 +383,11 @@ describe("refinePrompt", () => {
   });
   it("times out even if the provider ignores the abort signal", async () => {
     const { provider } = fakeProvider(() => new Promise(() => {}));
-    await assert.rejects(refinePrompt({ text: "x", target: "claude" }, provider, { timeoutMs: 30 }), (e: unknown) => {
-      return e instanceof ProviderError && e.kind === "timeout";
-    });
+    await keepingEventLoopAlive(() =>
+      assert.rejects(refinePrompt({ text: "x", target: "claude" }, provider, { timeoutMs: 30 }), (e: unknown) => {
+        return e instanceof ProviderError && e.kind === "timeout";
+      }),
+    );
   });
   it("maps invalid output to a provider error", async () => {
     const { provider } = fakeProvider(() => ({ refinedPrompt: "" }));

@@ -28,3 +28,20 @@ export const validOutput = (refinedPrompt = "Analise a hierarquia visual do dash
   refinedPrompt,
   warnings: [],
 });
+
+/**
+ * Keeps the event loop busy while `run` is awaited.
+ *
+ * The engine's timeout comes from `AbortSignal.timeout()`, which is unref'd: when a test's only
+ * pending work is a provider promise that never settles, Node can drain the loop and report
+ * "Promise resolution is still pending but the event loop has already resolved" before the abort
+ * fires. A real request always has an open socket holding the loop; a test does not.
+ */
+export async function keepingEventLoopAlive<T>(run: () => Promise<T>): Promise<T> {
+  const tick = setInterval(() => {}, 1_000);
+  try {
+    return await run();
+  } finally {
+    clearInterval(tick);
+  }
+}

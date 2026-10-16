@@ -4,7 +4,7 @@ import { describe, it } from "node:test";
 import { MAX_INPUT_CHARS } from "../src/engine/types.js";
 import { ProviderError } from "../src/providers/types.js";
 import { buildServer } from "../src/server.js";
-import { fakeProvider, testConfig, validOutput } from "./helpers.js";
+import { fakeProvider, keepingEventLoopAlive, testConfig, validOutput } from "./helpers.js";
 
 const EXT = "chrome-extension://abcdefghijklmnop";
 
@@ -137,7 +137,9 @@ describe("POST /api/refine", () => {
 
   it("returns 504 on timeout", async () => {
     const { provider } = fakeProvider(() => new Promise(() => {}));
-    const res = await post(buildServer(testConfig({ timeoutMs: 30 }), provider, false), { text: "x", target: "claude" });
+    const res = await keepingEventLoopAlive(() =>
+      post(buildServer(testConfig({ timeoutMs: 30 }), provider, false), { text: "x", target: "claude" }),
+    );
     assert.equal(res.statusCode, 504);
   });
 
