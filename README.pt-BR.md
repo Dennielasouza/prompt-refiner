@@ -59,10 +59,10 @@ Depois, em outro terminal, confira se ele responde e refine alguma coisa:
 curl -s http://127.0.0.1:8787/api/health
 curl -s -X POST http://127.0.0.1:8787/api/refine \
   -H 'Content-Type: application/json' \
-  -d '{"text":"me da 10 ideias de nome pra uma cafeteria pet friendly","target":"chatgpt"}'
+  -d '{"text":"como eu peço aumento? trabalho ha 2 anos, entrego bem mas nunca falei disso com meu gestor","target":"chatgpt","depth":"deep"}'
 ```
 
-Se voltar um prompt refinado, o motor está funcionando. Tudo o que vem abaixo é a mesma coisa explicada com calma, mais a extensão do navegador e a integração com o Mac.
+O que volta é aquela pergunta solta virada em um prompt que diz o que cobrir e que, como você não disse setor nem valores, manda o destino não presumir nada disso. É esse o produto inteiro. Tudo o que vem abaixo é a mesma coisa explicada com calma, mais a extensão do navegador e a integração com o Mac.
 
 ### 1. Clone e instale
 
@@ -80,6 +80,8 @@ cp backend/.env.example backend/.env
 
 É no `backend/.env` que o motor é configurado. Ele está no `.gitignore` — nunca versione esse arquivo.
 
+> Os comandos abaixo trazem `-w backend` ou `-w extension`. Isso é o npm dizendo "rode dentro daquele workspace": o repositório tem três (`backend`, `extension`, `desktop`) e o `-w` escolhe um.
+
 ### 2. Escolha o motor
 
 #### Opção 1 — a sua assinatura do Claude, sem chave de API (recomendada)
@@ -95,6 +97,8 @@ Se você já paga o Claude (Pro ou Max), pode usar essa assinatura em vez de com
    O backend procura o binário em `~/.local/bin/claude`, que é onde a instalação nativa o
    coloca. Se o seu estiver em outro lugar, defina o caminho absoluto em `PROMPT_COMPILER_CLAUDE_BIN`.
 
+   Confira as duas coisas antes de seguir: `claude --version` deve imprimir uma versão, e `claude auth status` deve mostrar você conectada.
+
 2. Abra o `backend/.env` — **não precisa mudar nada**. O exemplo já vem nesta opção:
 
    ```bash
@@ -109,7 +113,8 @@ Se você já paga o Claude (Pro ou Max), pode usar essa assinatura em vez de com
 
 É só isso. Assim, um refinamento leva cerca de 4 segundos em média.
 
-**O que este modo é, e o que não é:**
+<details>
+<summary><strong>O que este modo é, e o que não é</strong> — vale ler, mas não antes de terminar a instalação</summary>
 
 - Cada pessoa entra com a **própria** assinatura, no binário oficial e não modificado do Claude Code. O Prompt Refiner nunca pede, guarda nem repassa credenciais do Claude — a autenticação é feita pela própria CLI `claude`, e o uso é cobrado pela Anthropic direto de quem está usando.
 - **Nunca encaminhe pedidos de outras pessoas por um único login do Claude.** Isso é para o seu uso, na sua máquina. Não coloque atrás de um endpoint compartilhado.
@@ -118,6 +123,8 @@ Se você já paga o Claude (Pro ou Max), pode usar essa assinatura em vez de com
 - **Uma ressalva honesta:** isso depende de uma política que é da Anthropic, e que mudou mais de uma vez ao longo de 2026 — a Anthropic reserva o direito de agir sem aviso prévio, então esse caminho pode parar de funcionar. A opção 2 continua sempre disponível.
 
 Se o backend estiver instalado como serviço no macOS e não conseguir ler o seu login do Chaveiro, gere um token de longa duração da assinatura com `claude setup-token` e coloque em `CLAUDE_CODE_OAUTH_TOKEN`. É uma credencial — trate como senha.
+
+</details>
 
 #### Opção 2 — a sua própria chave de API
 
@@ -152,15 +159,9 @@ npm run dev
 
 Ele recarrega quando você salva um arquivo **de código**. Ele **não** recarrega quando você edita o `backend/.env`: pare com Ctrl+C e inicie de novo.
 
-Depois que você confirmar que funciona, o macOS pode rodá-lo como serviço sempre ligado, que inicia junto com o computador e volta sozinho se cair:
+Deixe o `npm run dev` rodando por enquanto. O macOS pode transformá-lo em serviço sempre ligado depois, **no passo 4** — ele restringe o CORS ao ID da sua extensão, e esse ID só existe depois que a extensão é gerada, então instalar agora significaria rodar o comando duas vezes.
 
-```bash
-npm run install-service -w backend
-```
-
-Vale saber o que esse comando faz antes de rodar: ele instala um serviço de segundo plano, **copia o seu `backend/.env`** para `~/Library/Application Support/PromptRefiner/` (com permissão 600) e **restringe o CORS ao ID da sua extensão**. Por isso, rode-o de novo sempre que editar o `.env`, mover a pasta do projeto ou carregar a extensão de outro lugar.
-
-Não rode os dois — eles disputam a porta 8787. Para conferir se está no ar:
+Para conferir se está no ar:
 
 ```bash
 curl -s http://127.0.0.1:8787/api/health
@@ -168,12 +169,14 @@ curl -s http://127.0.0.1:8787/api/health
 
 Deve aparecer `"status":"ok"` e o provedor que você escolheu. Se aparecer `misconfigured`, a mensagem diz qual variável está faltando.
 
+`ok` quer dizer que o backend está configurado — não que o seu motor de IA vai responder. Com o `claude-cli`, um login vencido só aparece no primeiro refinamento de verdade, que é o comando seguinte.
+
 Agora prove que o motor funciona, sem precisar mexer no navegador ainda:
 
 ```bash
 curl -s -X POST http://127.0.0.1:8787/api/refine \
   -H 'Content-Type: application/json' \
-  -d '{"text":"me da 10 ideias de nome pra uma cafeteria pet friendly","target":"chatgpt"}'
+  -d '{"text":"como eu peço aumento? trabalho ha 2 anos, entrego bem mas nunca falei disso com meu gestor","target":"chatgpt","depth":"deep"}'
 ```
 
 Em alguns segundos deve voltar um prompt refinado. Se isso funcionou, todo o resto é só fazer essa mesma chamada acontecer a partir de um clique com o botão direito.
@@ -194,9 +197,19 @@ npm run build -w extension
 
 *Carregar sem compactação* quer dizer que o Chrome roda a extensão direto daquela pasta, em vez de pegá-la na loja: nada é verificado pelo Google, ela não se atualiza sozinha, e o Chrome pode pedir confirmação depois de reiniciar. Você está confiando no código daquela pasta — e é por isso que ele está todo aqui para ser lido.
 
-> **Se você instalou o backend como serviço do macOS**, rode `npm run install-service -w backend` mais uma vez agora. O serviço prende o CORS ao ID da sua extensão, e esse ID vem do caminho completo da pasta `extension/dist` — que só passou a existir com o build que você acabou de rodar. Rode de novo sempre que mover a pasta do projeto ou carregar a extensão de outro lugar.
+A página de configurações abre na primeira instalação (para reabrir, clique no ícone da extensão). Confira se o **Endpoint da API** é `http://127.0.0.1:8787` e clique em **Testar conexão** — deve aparecer *Conectado*.
 
-A página de configurações abre na primeira instalação (para reabrir, clique no ícone da extensão). Confira se o **Endpoint da API** é `http://127.0.0.1:8787` (se você mudou a `PORT` no `.env`, use a mesma porta aqui) e clique em **Testar conexão** — deve aparecer *Conectado*.
+> **Se você mudou a `PORT` no `backend/.env`, coloque a mesma porta aqui.** Divergência entre as duas é a causa mais comum de *Desconectado*.
+
+Ainda não quer mexer no Chrome? O `npm run test:e2e -w extension` carrega essa mesma extensão num Chromium descartável e exercita o fluxo inteiro — seleção, substituição, desfazer, campo de senha, erro do backend — sem tocar no seu navegador. Ele precisa do Chromium do Playwright uma vez: `npx playwright install chromium`.
+
+**Agora é a hora de instalar o serviço de segundo plano**, se você quiser (só no macOS):
+
+```bash
+npm run install-service -w backend
+```
+
+Ele instala um serviço que inicia junto com o computador e volta sozinho se cair, **copia o seu `backend/.env`** para `~/Library/Application Support/PromptRefiner/` (com permissão 600) e **prende o CORS ao ID desta extensão** — que vem do caminho completo da pasta `extension/dist`, por isso precisou esperar o build. Rode de novo sempre que editar o `.env`, mover a pasta do projeto ou carregar a extensão de outro lugar. Pare o `npm run dev` antes; os dois disputam a porta.
 
 Agora selecione um texto em qualquer campo, clique com o botão direito e escolha **Prompt Refiner ▸ Refinar prompt**.
 
@@ -405,7 +418,9 @@ desktop/     macOS: src/refine.ts (a CLI que os Serviços chamam), scripts/servi
 { "text": "prompt original", "target": "claude", "depth": "deep", "format": "markdown", "kind": "prompt", "language": "pt-BR" }
 ```
 
-`target`: `auto | generic | chatgpt | claude | gemini | codex | claude-code`. `depth`: `balanced` (padrão) ou `deep`. `format`: `markdown` ou `auto` (padrão: `PROMPT_DEFAULT_FORMAT`). `kind`: `prompt` (padrão), `claude-md` ou `agents-md` — nesses dois o destino é implícito. O `hostname` só é enviado, e só é usado, com `target: "auto"`.
+**`text` e `target` são obrigatórios em toda requisição**; o resto é opcional.
+
+`target`: `auto | generic | chatgpt | claude | gemini | codex | claude-code`. `depth`: `balanced` (padrão) ou `deep`. `format`: `markdown` ou `auto` (padrão: `PROMPT_DEFAULT_FORMAT`). `kind`: `prompt` (padrão), `claude-md` ou `agents-md` — nesses dois o `target` da resposta é forçado (`claude-code` e `codex`), mas você ainda precisa **enviar** um, que será ignorado; `generic` é a escolha honesta. O `hostname` só é enviado, e só é usado, com `target: "auto"`.
 
 O `200` devolve `{ refinedPrompt, target, depth, format, kind, taskType, complexity, strategies, warnings }` (`strategies` é sempre `[]`, mantido por compatibilidade). Erros devolvem `{ "error": { "code", "message" } }`: `400` entrada inválida · `403` origem não permitida · `413` texto acima de 12.000 caracteres · `415` não é JSON · `422` o modelo recusou · `502` erro do provedor ou saída inválida do modelo · `503` backend não configurado, ou rate limit · `504` timeout.
 
@@ -435,7 +450,7 @@ npm run usage -w backend        # relatório de custo (precisa do serviço do ma
 ```
 
 - No Linux e no Windows, rode os unitários por workspace: `npm test -w backend && npm test -w extension`. O mesmo vale num Mac sem as Xcode Command Line Tools, já que o workspace de desktop compila Swift.
-- O `npm run usage -w backend` lê o log que o **serviço do macOS** grava. Rodando o backend com `npm run dev`, o registro vai para o terminal, então o relatório virá vazio.
+- O `npm run usage -w backend` lê o `~/Library/Logs/PromptRefiner/backend.log`, que o **serviço do macOS** grava. Esse arquivo é da máquina, não desta pasta: o `npm run dev` não acrescenta nada a ele e, numa máquina onde o serviço já rodou antes, o relatório mostrará esse histórico antigo em vez de nada.
 - O e2e precisa do Chromium do Playwright, uma vez (`npx playwright install chromium`). Ele carrega a extensão de verdade contra um backend real com um provedor falso determinístico, então não custa nada.
 - O `npm run eval -w backend` faz chamadas reais: custa dinheiro de API no `anthropic`/`openai` e conta no seu plano no `claude-cli`. Filtre pelo nome do caso com `npm run eval -w backend -- FILE`.
 - Páginas para teste manual: `extension/test/fixtures/index.html` (input, textarea, contenteditable, um campo de senha, uma textarea estilo React) e `editors.html` (Tiptap/ProseMirror, Quill, Lexical). Sirva com qualquer servidor estático, ex.: `npx http-server extension/test/fixtures -p 5500`.
