@@ -8,7 +8,7 @@ Select the rough text you just typed — loose notes, half sentences, typos and 
 
 <sub>Recorded with the real extension and a real backend — <code>extension/scripts/record-demo.mjs</code>. The refined prompt you see is the genuine output, not a mock-up.</sub>
 
-> **Interface language:** the extension menus, the settings page and the macOS messages are in Brazilian Portuguese. Your prompts are refined in whatever language you wrote them in. English UI is on the [roadmap](#roadmap).
+> **Interface language:** the extension menus, the settings page, the macOS messages, the comments in `backend/.env.example` and the backend's error messages are in Brazilian Portuguese. Your prompts are refined in whatever language you wrote them in. English UI is on the [roadmap](#roadmap).
 
 ## What makes it different
 
@@ -75,13 +75,15 @@ If you already pay for Claude (Pro or Max), you can use that subscription instea
    The backend looks for the binary at `~/.local/bin/claude`, which is where the native
    install puts it. If yours is elsewhere, set `PROMPT_COMPILER_CLAUDE_BIN` to its absolute path.
 
-2. Edit `backend/.env`:
+2. Open `backend/.env` — **nothing to change**. The example already ships on this option:
 
    ```bash
-   PROMPT_COMPILER_PROVIDER=claude-cli
-   PROMPT_COMPILER_MODEL=claude-sonnet-5-5
-   PROMPT_COMPILER_EFFORT=medium
+   PROMPT_COMPILER_PROVIDER=claude-cli      # already set in .env.example
+   PROMPT_COMPILER_MODEL=claude-sonnet-5-5  # already set
+   PROMPT_COMPILER_EFFORT=medium            # already set
    ```
+
+   If you are switching back from Option 2, **edit the existing `PROMPT_COMPILER_PROVIDER` line** rather than adding a second one — a duplicated key is ambiguous.
 
    Leave `ANTHROPIC_API_KEY` and `OPENAI_API_KEY` empty — they are deliberately **not** passed to the CLI, because an API key would override your subscription login.
 
@@ -100,6 +102,8 @@ If the backend is installed as a macOS background service and it cannot read you
 #### Option 2 — your own API key
 
 Works anywhere, and does not depend on anyone's subscription policy. You pay your provider directly, per call.
+
+Change the `PROMPT_COMPILER_PROVIDER` line already in `backend/.env` (don't add a second one) and fill in the key.
 
 Anthropic:
 
@@ -122,13 +126,21 @@ There is no hardcoded model: `PROMPT_COMPILER_MODEL` is always required. Every r
 
 ### 3. Start the backend
 
-```bash
-# macOS: install it as an always-on background service (starts at login, restarts if it crashes)
-npm run install-service -w backend
+Start here — any OS, nothing installed into your system, Ctrl+C to stop:
 
-# Any OS: run it in a terminal instead (reloads when you save a file)
+```bash
 npm run dev
 ```
+
+It reloads when you save a **source** file. It does **not** reload when you edit `backend/.env`: stop it with Ctrl+C and start it again.
+
+Once you know it works, macOS can run it as an always-on service that starts at login and restarts if it crashes:
+
+```bash
+npm run install-service -w backend
+```
+
+That command does three things worth knowing in advance: it installs a LaunchAgent, it **copies your `backend/.env`** to `~/Library/Application Support/PromptRefiner/` (mode 600), and it **narrows CORS to your extension's ID**. So run it again whenever you edit `.env`, move the project folder, or load the extension from somewhere else.
 
 Don't run both — they compete for port 8787. Check that it is up:
 
@@ -152,11 +164,9 @@ npm run build -w extension
 2. Turn on **Developer mode**.
 3. Click **Load unpacked** and pick the `extension/dist` folder.
 
-The settings page opens on the first install (you can reopen it by clicking the extension's icon). Check that the **Endpoint da API** is `http://localhost:8787` and click **Testar conexão** — it should say *Conectado*.
+The settings page opens on the first install (you can reopen it by clicking the extension's icon). Check that the **Endpoint da API** is `http://127.0.0.1:8787` (if you changed `PORT` in `.env`, use that port here too) and click **Testar conexão** — it should say *Conectado*.
 
 Now select some text in any text field, right-click, and choose **Prompt Refiner ▸ Refinar prompt**.
-
-> If you installed the backend as a macOS service, run `npm run install-service -w backend` again whenever you edit `backend/.env`, move the project folder, or load the extension from a different folder. The service copies your settings and locks itself to your extension's ID, so it needs to be told about the change.
 
 ### 5. Optional — use it in any Mac app
 
@@ -269,7 +279,21 @@ npm run usage -w backend -- --days 7      # the last 7 days
 npm run usage -w backend -- --detalhes    # with tokens and cache details
 ```
 
+That history is the backend's own log at `~/Library/Logs/PromptRefiner/backend.log`, written when it runs as a macOS service. It lives outside the project and holds metadata only — tokens, timings, costs, never prompt text. Delete the file to clear it; `npm run uninstall-service -w backend` removes the service and its copy of your `.env`, but leaves the log.
+
 Subscription calls (`claude-cli`) are listed separately, at US$ 0, with the value they *would* have cost on the API for comparison. The prices used for the estimates live in `backend/src/config/pricing.ts`; unknown models get no estimate.
+
+## Troubleshooting
+
+| What you see | What it means | What to do |
+|---|---|---|
+| `"status":"misconfigured"` from the health check | A required variable is missing. The `message` field names it — **in Brazilian Portuguese**. | Set it in `backend/.env`. If the backend runs as a macOS service, run `npm run install-service -w backend` again afterwards. |
+| `EADDRINUSE` on start, or the health check answers something you don't recognise | Port 8787 is already taken — often by a second copy of this backend. | Stop the other one, or set `PORT` in `.env`, and then put the same port in the extension's **Endpoint da API**. |
+| You edited `.env` and nothing changed | `npm run dev` only watches source files; the macOS service reads a *copy* of your `.env`. | Dev: Ctrl+C and start again. Service: `npm run install-service -w backend`. |
+| The settings page says *Desconectado* | The extension cannot reach the backend. | Check the health URL in a terminal; make sure the endpoint matches `PORT`; use `127.0.0.1` rather than `localhost`. If you loaded the extension from a different folder after installing the service, run `npm run install-service -w backend` again — CORS is locked to the extension's ID. |
+| `claude: not found`, or `auth` errors with `claude-cli` | The CLI isn't where the backend expects, or it isn't signed in. | `claude` then `/login`. If the binary is elsewhere, set `PROMPT_COMPILER_CLAUDE_BIN` to its absolute path. If the service can't read your Keychain, use `CLAUDE_CODE_OAUTH_TOKEN`. |
+| The right-click menu isn't there | The menu only appears inside editable fields, and never in password fields. | Click into a text box first. `chrome://` pages and the Web Store are off-limits to every extension. |
+| Nothing happens and the text is unchanged | That is the intended failure mode. | Open the extension's settings page: the **Último problema** section shows the last failure. |
 
 ## Privacy, in plain words
 

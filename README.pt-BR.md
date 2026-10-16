@@ -8,7 +8,7 @@ Selecione o texto cru que você acabou de escrever — notas soltas, frases pela
 
 <sub>Gravado com a extensão real e um backend real — <code>extension/scripts/record-demo.mjs</code>. O prompt refinado que aparece é o resultado de verdade, não uma simulação.</sub>
 
-> **Idioma da interface:** os menus da extensão, a página de configurações e as mensagens do macOS estão em português do Brasil. Os seus prompts são refinados no idioma em que você escrever. Interface em inglês está nos [próximos passos](#próximos-passos).
+> **Idioma da interface:** os menus da extensão, a página de configurações, as mensagens do macOS, os comentários do `backend/.env.example` e as mensagens de erro do backend estão em português do Brasil. Os seus prompts são refinados no idioma em que você escrever. Interface em inglês está nos [próximos passos](#próximos-passos).
 
 ## O que ele tem de diferente
 
@@ -75,13 +75,15 @@ Se você já paga o Claude (Pro ou Max), pode usar essa assinatura em vez de com
    O backend procura o binário em `~/.local/bin/claude`, que é onde a instalação nativa o
    coloca. Se o seu estiver em outro lugar, defina o caminho absoluto em `PROMPT_COMPILER_CLAUDE_BIN`.
 
-2. Edite o `backend/.env`:
+2. Abra o `backend/.env` — **não precisa mudar nada**. O exemplo já vem nesta opção:
 
    ```bash
-   PROMPT_COMPILER_PROVIDER=claude-cli
-   PROMPT_COMPILER_MODEL=claude-sonnet-5-5
-   PROMPT_COMPILER_EFFORT=medium
+   PROMPT_COMPILER_PROVIDER=claude-cli      # já vem assim no .env.example
+   PROMPT_COMPILER_MODEL=claude-sonnet-5-5  # já vem assim
+   PROMPT_COMPILER_EFFORT=medium            # já vem assim
    ```
+
+   Se estiver voltando da Opção 2, **edite a linha `PROMPT_COMPILER_PROVIDER` que já existe**, em vez de acrescentar uma segunda — chave repetida é ambígua.
 
    Deixe `ANTHROPIC_API_KEY` e `OPENAI_API_KEY` vazias — elas **não** são passadas para a CLI de propósito, porque uma chave de API passaria por cima do login da assinatura.
 
@@ -122,13 +124,21 @@ Não há modelo fixo no código: `PROMPT_COMPILER_MODEL` é sempre obrigatório.
 
 ### 3. Inicie o backend
 
-```bash
-# macOS: instala como serviço sempre ligado (inicia no login e volta sozinho se cair)
-npm run install-service -w backend
+Comece por aqui — funciona em qualquer sistema, não instala nada no seu computador, e para com Ctrl+C:
 
-# Qualquer sistema: roda no terminal (recarrega quando você salva um arquivo)
+```bash
 npm run dev
 ```
+
+Ele recarrega quando você salva um arquivo **de código**. Ele **não** recarrega quando você edita o `backend/.env`: pare com Ctrl+C e inicie de novo.
+
+Depois que você confirmar que funciona, o macOS pode rodá-lo como serviço sempre ligado, que inicia junto com o computador e volta sozinho se cair:
+
+```bash
+npm run install-service -w backend
+```
+
+Vale saber o que esse comando faz antes de rodar: ele instala um serviço de segundo plano, **copia o seu `backend/.env`** para `~/Library/Application Support/PromptRefiner/` (com permissão 600) e **restringe o CORS ao ID da sua extensão**. Por isso, rode-o de novo sempre que editar o `.env`, mover a pasta do projeto ou carregar a extensão de outro lugar.
 
 Não rode os dois — eles disputam a porta 8787. Para conferir se está no ar:
 
@@ -152,11 +162,9 @@ npm run build -w extension
 2. Ative o **Modo do desenvolvedor**.
 3. Clique em **Carregar sem compactação** e escolha a pasta `extension/dist`.
 
-A página de configurações abre na primeira instalação (para reabrir, clique no ícone da extensão). Confira se o **Endpoint da API** é `http://localhost:8787` e clique em **Testar conexão** — deve aparecer *Conectado*.
+A página de configurações abre na primeira instalação (para reabrir, clique no ícone da extensão). Confira se o **Endpoint da API** é `http://127.0.0.1:8787` (se você mudou a `PORT` no `.env`, use a mesma porta aqui) e clique em **Testar conexão** — deve aparecer *Conectado*.
 
 Agora selecione um texto em qualquer campo, clique com o botão direito e escolha **Prompt Refiner ▸ Refinar prompt**.
-
-> Se você instalou o backend como serviço do macOS, rode `npm run install-service -w backend` de novo sempre que editar o `backend/.env`, mover a pasta do projeto ou carregar a extensão de outra pasta. O serviço copia as suas configurações e se restringe ao ID da sua extensão, então precisa ser avisado da mudança.
 
 ### 5. Opcional — use em qualquer app do Mac
 
@@ -269,7 +277,21 @@ npm run usage -w backend -- --days 7      # últimos 7 dias
 npm run usage -w backend -- --detalhes    # com tokens e detalhes de cache
 ```
 
+Esse histórico é o log do próprio backend, em `~/Library/Logs/PromptRefiner/backend.log`, gravado quando ele roda como serviço do macOS. Ele fica fora da pasta do projeto e guarda só metadados — tokens, tempos e custos, nunca o texto dos prompts. Para zerar, apague o arquivo; o `npm run uninstall-service -w backend` remove o serviço e a cópia do seu `.env`, mas mantém o log.
+
 As chamadas por assinatura (`claude-cli`) aparecem em seção própria, com US$ 0, ao lado do valor que *teriam* custado na API, para comparação. Os preços usados na estimativa ficam em `backend/src/config/pricing.ts`; modelos desconhecidos ficam sem estimativa.
+
+## Quando algo dá errado
+
+| O que você vê | O que significa | O que fazer |
+|---|---|---|
+| `"status":"misconfigured"` na checagem de saúde | Falta uma variável obrigatória. O campo `message` diz qual. | Preencha no `backend/.env`. Se o backend roda como serviço do macOS, rode `npm run install-service -w backend` depois. |
+| `EADDRINUSE` ao iniciar, ou a checagem responde algo estranho | A porta 8787 já está ocupada — muitas vezes por outra cópia deste mesmo backend. | Pare a outra, ou defina `PORT` no `.env` e use a mesma porta no **Endpoint da API** da extensão. |
+| Você editou o `.env` e nada mudou | O `npm run dev` só observa arquivos de código; o serviço do macOS lê uma *cópia* do seu `.env`. | No modo dev: Ctrl+C e inicie de novo. No serviço: `npm run install-service -w backend`. |
+| A página de configurações diz *Desconectado* | A extensão não está alcançando o backend. | Confira a URL de saúde no terminal; veja se o endpoint bate com a `PORT`; use `127.0.0.1` em vez de `localhost`. Se você carregou a extensão de outra pasta depois de instalar o serviço, rode `npm run install-service -w backend` de novo — o CORS está preso ao ID da extensão. |
+| `claude: not found`, ou erros de `auth` com o `claude-cli` | A CLI não está onde o backend espera, ou não está logada. | Rode `claude` e depois `/login`. Se o programa estiver em outro lugar, aponte `PROMPT_COMPILER_CLAUDE_BIN` para o caminho completo. Se o serviço não conseguir ler o Chaveiro, use `CLAUDE_CODE_OAUTH_TOKEN`. |
+| O menu do botão direito não aparece | O menu só aparece dentro de campos editáveis, e nunca em campos de senha. | Clique dentro de um campo de texto primeiro. Páginas `chrome://` e a loja de extensões são proibidas para qualquer extensão. |
+| Não acontece nada e o texto continua igual | É o comportamento esperado quando algo falha. | Abra a página de configurações da extensão: a seção **Último problema** mostra a última falha. |
 
 ## Privacidade, em palavras simples
 
