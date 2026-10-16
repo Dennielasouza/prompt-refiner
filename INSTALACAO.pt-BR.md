@@ -8,60 +8,44 @@ Este é o guia da instalação, e só isso. O que o Prompt Refiner faz, como con
 
 ---
 
-## Antes de começar
+## O que você precisa
 
-> **Copiando os comandos:** passe o mouse sobre o bloco cinza e use o **botão de copiar** que aparece no canto. As crases ``` que você vê na tela **não fazem parte do comando** — se elas forem junto, o terminal abre outro terminal dentro dele e parece que tudo deu errado.
+- **Um Mac**, ou qualquer computador com o Chrome. O atalho ⌥⌥ nos apps é só do macOS.
+- **Node.js 22 ou mais novo.** Se você não tem, o instalador avisa e diz onde baixar.
+- **Um motor de IA** — a sua assinatura do Claude (sem chave, sem cartão) ou uma chave de API sua. O instalador também confere isso e avisa se faltar.
 
-Você vai precisar de:
-
-- **Um Mac, ou qualquer computador com o Chrome.** A parte dos apps do Mac (o atalho ⌥⌥) é só do macOS.
-- **Node.js 22 ou mais novo.** Para saber se você já tem, abra o app **Terminal** e rode:
-
-  ```bash
-  node --version
-  ```
-
-  Se aparecer um número como `v22.11.0` ou maior, está pronto. Se disser *command not found*, baixe a versão **LTS** em [nodejs.org](https://nodejs.org) — o instalador faz tudo sozinho.
-
-- **Um motor de IA.** Você escolhe um dos dois, não precisa dos dois:
-  - **A sua assinatura do Claude** (Pro ou Max), sem chave de API nem cartão. É o caminho recomendado, e é o que o instalador já espera encontrar. Para isso o [Claude Code](https://code.claude.com) precisa estar instalado e logado.
-  - **Uma chave de API sua**, da Anthropic ou da OpenAI, paga por uso. Veja como configurar no [README](README.pt-BR.md#motores).
+Não precisa conferir nada à mão. O instalador verifica tudo e para com uma mensagem clara se algo estiver faltando.
 
 ---
 
-## Instalar — um comando
+## Passo 1 — Instalar
 
-Abra o app **Terminal**, cole a linha abaixo e aperte Enter:
+Abra o app **Terminal**, cole esta linha e aperte Enter:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
-Esse comando baixa um script da internet e roda. Vale saber o que ele faz antes: são **6 etapas** — conferir o Node, baixar as peças, criar a configuração, gerar a extensão, ligar o backend e integrar com o Mac. Ele **não pede senha** e **não escreve nada fora da sua pasta de usuário**. Para ler antes de rodar:
+> Use o **botão de copiar** no canto do bloco. As crases ``` que aparecem na tela **não fazem parte do comando**.
+
+Pronto. Ele faz tudo sozinho, em 6 etapas numeradas, e termina **refinando uma frase de verdade** para você ver funcionando.
+
+**Se parar no meio**, a mensagem diz o motivo e o que fazer. Pode rodar de novo quantas vezes quiser: ele detecta o que já está pronto.
+
+<details>
+<summary><strong>Prefere ver o que o script faz antes de rodar?</strong></summary>
+
+Ele **não pede senha** e **não escreve nada fora da sua pasta de usuário**. As 6 etapas são: conferir o Node, baixar as peças, criar a configuração, gerar a extensão, ligar o backend e integrar com os apps do Mac.
+
+Para ler o script inteiro antes:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | less
 ```
 
-(aperte `q` para sair)
+Aperte `q` para sair.
 
-É só isso. Ele baixa o projeto, instala tudo, liga o backend e termina **refinando uma frase de verdade** para você ver funcionando. Mostra 6 etapas numeradas pelo caminho.
-
-> **Copiando:** passe o mouse sobre o bloco cinza e use o **botão de copiar** no canto. As crases ``` que aparecem na tela **não fazem parte do comando**.
-
-Se preferir ler o script antes de rodar — é o que eu faria com qualquer comando da internet — baixe e abra primeiro:
-
-```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner && open ~/prompt-refiner/instalar.sh
-```
-
-e depois rode:
-
-```bash
-cd ~/prompt-refiner && ./instalar.sh
-```
-
-**Se ele parar no meio**, a mensagem diz o motivo e o que fazer. Pode rodar de novo quantas vezes quiser: ele detecta o que já está pronto e não repete.
+</details>
 
 ## Passo 2 — Carregar a extensão no Chrome
 

@@ -10,60 +10,44 @@ It is **one command** plus two things you do with the mouse. About 3 minutes.
 
 ---
 
-## Before you start
+## What you need
 
-> **Copying the commands:** hover over the grey block and use the **copy button** in its corner. The ``` backticks on screen are **not part of the command** — if they get copied too, your terminal opens another shell inside itself and it looks like everything failed.
+- **A Mac**, or any computer with Chrome. The ⌥⌥ gesture in apps is macOS only.
+- **Node.js 22 or newer.** If you don't have it, the installer says so and where to get it.
+- **One AI engine** — your Claude subscription (no key, no card) or an API key of your own. The installer checks this too and tells you if it's missing.
 
-You need:
-
-- **A Mac, or any computer with Chrome.** The Mac app integration (the ⌥⌥ gesture) is macOS only.
-- **Node.js 22 or newer.** To check, open the **Terminal** app and run:
-
-  ```bash
-  node --version
-  ```
-
-  A number like `v22.11.0` or higher means you are set. If it says *command not found*, install the **LTS** build from [nodejs.org](https://nodejs.org) — the installer does everything.
-
-- **One AI engine.** Pick one; you don't need both:
-  - **Your Claude subscription** (Pro or Max), with no API key and no card. This is the recommended path and the one the installer expects. It needs [Claude Code](https://code.claude.com) installed and signed in.
-  - **Your own API key**, from Anthropic or OpenAI, billed per call. See the [README](README.md#engines).
+Nothing to check by hand. The installer verifies everything and stops with a clear message if something is missing.
 
 ---
 
-## Install — one command
+## Step 1 — Install
 
-Open the **Terminal** app, paste the line below and press Enter:
+Open the **Terminal** app, paste this line and press Enter:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
-That command downloads a script from the internet and runs it. Worth knowing what it does first: **6 stages** — check Node, fetch dependencies, create the configuration, build the extension, start the backend, integrate with the Mac. It **never asks for your password** and **writes nothing outside your home folder**. To read it before running it:
+> Use the **copy button** in the block's corner. The ``` backticks on screen are **not part of the command**.
+
+That's it. It does everything itself, in six numbered stages, and finishes by **refining a real sentence** so you can see it work.
+
+**If it stops**, the message says why and what to do. You can run it as many times as you like: it detects what is already in place.
+
+<details>
+<summary><strong>Rather see what the script does before running it?</strong></summary>
+
+It **never asks for your password** and **writes nothing outside your home folder**. The six stages: check Node, fetch dependencies, create the configuration, build the extension, start the backend, integrate with the Mac apps.
+
+To read the whole script first:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | less
 ```
 
-(press `q` to quit)
+Press `q` to quit.
 
-That's it. It downloads the project, installs everything, starts the backend and finishes by **refining a real sentence** so you can see it work. Six numbered stages along the way.
-
-> **Copying:** hover over the grey block and use the **copy button** in its corner. The ``` backticks on screen are **not part of the command**.
-
-If you would rather read the script before running it — which is what I'd do with any command from the internet — download and open it first:
-
-```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner && open ~/prompt-refiner/instalar.sh
-```
-
-then run:
-
-```bash
-cd ~/prompt-refiner && ./instalar.sh
-```
-
-**If it stops**, the message says why and what to do. You can run it as many times as you like: it detects what is already in place and skips it.
+</details>
 
 ## Step 2 — Load the extension in Chrome
 
