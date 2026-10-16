@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The installer now always installs in one place.** It used to install wherever the script
+  happened to sit, so running it from a GitHub ZIP in `~/Downloads` (or from a temp folder)
+  built the extension there, printed every `✓`, and left the person unable to find
+  `extension/dist` in Chrome. The destination (`~/prompt-refiner`, or `PROMPT_REFINER_DIR`) is
+  now resolved and printed before any work: a copy outside it is moved to the destination and
+  the install continues from there, or, when something is already installed there, the
+  installer stops and shows the options instead of silently picking one.
+- **A re-run no longer leaves the previous version running.** When a backend was already
+  answering on the port, the installer skipped `install-service` entirely — so the new code
+  was never deployed and the extension's folder was never allowed through CORS, with success
+  on screen. The service is now reinstalled on every run, and the installer compares the
+  `compilerVersion` it gets from `/api/health` with the one in the source it just built.
+- **A busy port is caught up front.** If another program (typically a forgotten `npm run dev`)
+  holds the port, the installer stops before doing any work and names the PID, instead of
+  testing against someone else's server or failing late.
+- **No more mid-run dialogs or shared log files.** The Apple command line tools are checked
+  before anything calls `git` or `swiftc` (which pop a system dialog and wait for a click when
+  missing), unknown options are rejected instead of ignored, failures that don't stop the
+  install are collected and shown at the end (with a non-zero exit), and the logs of a run go
+  to a private temporary folder instead of predictable `/tmp/pr-*.log` names.
+
 ## [0.1.0] - 2026-10-15
 
 First public release. Source only: the extension is loaded unpacked, and the backend

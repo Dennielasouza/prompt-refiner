@@ -50,7 +50,7 @@ The engine that *refines* and the destination you are *writing for* are independ
 curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
-The installer handles dependencies, configuration, the extension build, the backend and the Mac shortcuts, then refines a real sentence so you can see it work. Two things stay manual, because Chrome and macOS only accept them through their own interfaces: loading the unpacked extension, and granting Accessibility for the ⌥⌥ gesture. [INSTALL.md](INSTALL.md) covers both, plus what to do when something goes wrong.
+The installer always installs into `~/prompt-refiner` (or into `PROMPT_REFINER_DIR`) and prints that path on its first line, so the folder you load in Chrome is never a surprise. It handles dependencies, configuration, the extension build, the backend and the Mac shortcuts, then refines a real sentence so you can see it work. Two things stay manual, because Chrome and macOS only accept them through their own interfaces: loading the unpacked extension, and granting Accessibility for the ⌥⌥ gesture. [INSTALL.md](INSTALL.md) covers both, plus what to do when something goes wrong.
 
 The rest of this README is reference: what each setting does, how the engine works, and how to work on the code.
 

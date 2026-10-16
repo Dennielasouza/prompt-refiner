@@ -50,7 +50,7 @@ O motor que *refina* e o destino para o qual você está *escrevendo* são indep
 curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
-O instalador cuida das dependências, da configuração, da extensão, do backend e dos atalhos do Mac, e no fim refina uma frase de verdade para você ver funcionando. Duas coisas continuam manuais, porque o Chrome e o macOS só aceitam pela interface deles: carregar a extensão e liberar a Acessibilidade do gesto ⌥⌥. O [guia de instalação](INSTALACAO.pt-BR.md) cobre as duas, e também o que fazer quando algo dá errado.
+O instalador instala sempre em `~/prompt-refiner` (ou no que estiver em `PROMPT_REFINER_DIR`) e imprime esse caminho na primeira linha, para a pasta que você carrega no Chrome nunca ser uma surpresa. Ele cuida das dependências, da configuração, da extensão, do backend e dos atalhos do Mac, e no fim refina uma frase de verdade para você ver funcionando. Duas coisas continuam manuais, porque o Chrome e o macOS só aceitam pela interface deles: carregar a extensão e liberar a Acessibilidade do gesto ⌥⌥. O [guia de instalação](INSTALACAO.pt-BR.md) cobre as duas, e também o que fazer quando algo dá errado.
 
 O resto deste README é referência: o que cada configuração faz, como o motor funciona e como mexer no código.
 

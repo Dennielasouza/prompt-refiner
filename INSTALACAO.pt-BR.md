@@ -30,12 +30,16 @@ curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/i
 
 Pronto. Ele faz tudo sozinho, em 6 etapas numeradas, e termina **refinando uma frase de verdade** para você ver funcionando.
 
+**Onde fica instalado:** sempre em `~/prompt-refiner`, não importa de onde você rodou o comando. O instalador imprime esse caminho na **primeira** linha e no **fim**, junto com a pasta da extensão — é esse o caminho que você vai usar no passo 2. Para instalar em outro lugar, ponha `PROMPT_REFINER_DIR=~/outra-pasta` antes do comando.
+
+**Baixou o ZIP do GitHub em vez de usar o comando?** Pode rodar o `./instalar.sh` de dentro da pasta descompactada: ele copia o projeto para `~/prompt-refiner` e continua de lá. Se já existir uma instalação em `~/prompt-refiner`, ele para e mostra as opções — o que ele nunca faz é instalar escondido dentro da pasta de Downloads, de onde você não acharia a extensão depois.
+
 **Se parar no meio**, a mensagem diz o motivo e o que fazer. Pode rodar de novo quantas vezes quiser: ele detecta o que já está pronto.
 
 <details>
 <summary><strong>Prefere ver o que o script faz antes de rodar?</strong></summary>
 
-Ele **não pede senha** e **não escreve nada fora da sua pasta de usuário**. As 6 etapas são: conferir o Node, baixar as peças, criar a configuração, gerar a extensão, ligar o backend e integrar com os apps do Mac.
+Ele **não pede senha** e **não escreve nada fora da sua pasta de usuário**. As 6 etapas são: conferir o computador (Node e a porta livre), baixar as peças, criar a configuração, gerar a extensão, ligar o backend e integrar com os apps do Mac.
 
 Para ler o script inteiro antes:
 
@@ -54,7 +58,7 @@ Isso o instalador não consegue fazer: o Chrome só aceita no mouse.
 1. Abra `chrome://extensions`
 2. Ligue o **Modo do desenvolvedor**, no canto superior direito
 3. Clique em **Carregar sem compactação**
-4. Escolha a pasta `~/prompt-refiner/extension/dist`
+4. Escolha a pasta `~/prompt-refiner/extension/dist` — é o caminho que o instalador imprimiu na primeira e na última linha
 
 > **Não acha a pasta na janela do Chrome?** Aperte **⌘⇧G**, cole `~/prompt-refiner/extension/dist` e dê Enter. O instalador também imprime o caminho exato no fim.
 >
@@ -89,7 +93,9 @@ O texto selecionado é substituído pelo prompt refinado, ali mesmo. Se algo fal
 | `command not found: node` | O Node não está instalado. Baixe a versão LTS em [nodejs.org](https://nodejs.org) |
 | `destination path ... already exists` | Só aparece se você clonar à mão: a pasta já existe de uma tentativa anterior. Rode `cd ~/prompt-refiner && ./instalar.sh`. Pelo comando único isso é tratado sozinho |
 | O instalador diz que o Claude Code não está logado | Rode `claude` no terminal, digite `/login`, escolha a conta com assinatura e depois `/exit` |
-| O instalador diz que a porta já está em uso | Outro programa ocupa a 8787. Abra `backend/.env`, mude a linha `PORT=` e rode o instalador de novo |
+| O instalador diz que a porta já está ocupada | Ele para **antes** de começar e mostra o PID de quem está na porta (quase sempre um `npm run dev` esquecido num terminal). Feche aquele terminal, ou rode `kill <PID>`, e rode o instalador de novo. Se a porta é de outro programa que você quer manter, mude `PORT=` no `backend/.env` |
+| Instalei, mas continuo com a versão anterior | Não acontece mais: o instalador reinstala o serviço em toda rodada e confere se a versão que está no ar é a desta pasta. Se não for, ele para e diz qual é qual |
+| Rodei o instalador de dentro de um ZIP e não achei a extensão no Chrome | Não acontece mais: a instalação vai sempre para `~/prompt-refiner`, e esse caminho é a primeira e a última coisa que aparece na tela |
 | A extensão diz *Desconectado* | Veja se a porta no campo **Endpoint da API** é a mesma do `backend/.env`. Se você moveu a pasta do projeto, rode o instalador de novo |
 | O ⌥⌥ não faz nada | A Acessibilidade não está concedida, ou foi concedida a uma versão antiga do app. Refaça o passo 3, removendo com **−** antes de adicionar |
 | O ⌥⌥ abre a entrada rápida do Claude | O app do Claude usa o mesmo atalho. Desligue em Claude › Ajustes › Sistema |

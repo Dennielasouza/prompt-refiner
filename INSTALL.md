@@ -32,12 +32,16 @@ curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/i
 
 That's it. It does everything itself, in six numbered stages, and finishes by **refining a real sentence** so you can see it work.
 
+**Where it installs:** always `~/prompt-refiner`, no matter where you ran the command from. The installer prints that path on its **first** line and again at the **end**, together with the extension folder — that is the path you need in step 2. To install somewhere else, put `PROMPT_REFINER_DIR=~/another-folder` in front of the command.
+
+**Downloaded the GitHub ZIP instead of using the command?** You can run `./instalar.sh` from inside the unzipped folder: it copies the project to `~/prompt-refiner` and carries on from there. If something is already installed at `~/prompt-refiner`, it stops and shows you the options — what it never does is install quietly inside your Downloads folder, where you would not find the extension afterwards.
+
 **If it stops**, the message says why and what to do. You can run it as many times as you like: it detects what is already in place.
 
 <details>
 <summary><strong>Rather see what the script does before running it?</strong></summary>
 
-It **never asks for your password** and **writes nothing outside your home folder**. The six stages: check Node, fetch dependencies, create the configuration, build the extension, start the backend, integrate with the Mac apps.
+It **never asks for your password** and **writes nothing outside your home folder**. The six stages: check the machine (Node and a free port), fetch dependencies, create the configuration, build the extension, start the backend, integrate with the Mac apps.
 
 To read the whole script first:
 
@@ -56,7 +60,7 @@ The installer cannot do this one: Chrome only accepts it through the interface.
 1. Open `chrome://extensions`
 2. Turn on **Developer mode**, top right
 3. Click **Load unpacked**
-4. Choose the folder `~/prompt-refiner/extension/dist`
+4. Choose the folder `~/prompt-refiner/extension/dist` — the path the installer printed on its first and last line
 
 > **Can't find the folder in Chrome's window?** Press **⌘⇧G**, paste `~/prompt-refiner/extension/dist` and hit Enter. The installer also prints the exact path at the end.
 >
@@ -91,7 +95,9 @@ The selected text is replaced by the refined prompt, right where it was. If anyt
 | `command not found: node` | Node is not installed. Get the LTS build from [nodejs.org](https://nodejs.org) |
 | `destination path ... already exists` | Only happens if you clone by hand: the folder is there from an earlier try. Run `cd ~/prompt-refiner && ./instalar.sh`. The one-command install handles this itself |
 | The installer says Claude Code is not signed in | Run `claude`, type `/login`, pick the account with a subscription, then `/exit` |
-| The installer says the port is in use | Something else holds 8787. Open `backend/.env`, change the `PORT=` line, and run the installer again |
+| The installer says the port is taken | It stops **before** doing any work and prints the PID holding the port (almost always a forgotten `npm run dev` in some terminal). Close that terminal, or run `kill <PID>`, and run the installer again. If the port belongs to another program you want to keep, change `PORT=` in `backend/.env` |
+| I installed, but I still get the previous version | Can't happen any more: the installer reinstalls the service on every run and checks that the version answering is the one in this folder. If it isn't, it stops and names both |
+| I ran the installer from inside a ZIP and couldn't find the extension in Chrome | Can't happen any more: the install always lands in `~/prompt-refiner`, and that path is the first and the last thing on screen |
 | The extension says *Desconectado* | Check that the port in **Endpoint da API** matches `backend/.env`. If you moved the project folder, run the installer again |
 | ⌥⌥ does nothing | Accessibility is not granted, or it was granted to an older build. Redo step 3, removing with **−** before adding |
 | ⌥⌥ opens Claude's quick entry | The Claude app uses the same gesture. Turn it off in Claude › Settings › System |
