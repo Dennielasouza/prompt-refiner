@@ -14,7 +14,7 @@
  * Requires ffmpeg on PATH.
  */
 import { execFileSync } from "node:child_process";
-import { createReadStream, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, rmSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -114,15 +114,16 @@ await wait(4200);
 const refined = await page.evaluate(() => document.getElementById("composer").value);
 console.log(`\nprompt refinado (${refined.length} chars):\n${refined}\n`);
 
+// Take the recording of THIS page, not whatever lands in the folder first: the extension opens its
+// own options page on install, and that tab is recorded too. Picking a file by extension once gave
+// a "demo" that was twenty seconds of the settings screen.
+const video = page.video();
+if (!video) throw new Error("page was not being recorded");
 await context.close();
 fixtures.close();
 
 // 5. webm → gif, two-pass palette so the text stays readable.
-const webm = join(
-  TMP,
-  "video",
-  readdirSync(join(TMP, "video")).find((f) => f.endsWith(".webm")),
-);
+const webm = await video.path();
 const palette = join(TMP, "palette.png");
 const gif = join(OUT_DIR, "demo.gif");
 const filters = "fps=10,scale=900:-1:flags=lanczos";
