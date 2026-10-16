@@ -1,0 +1,36 @@
+{
+  "name": "prompt-refiner",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Refine what you select into a better prompt for ChatGPT, Claude, Gemini, Codex or Claude Code — in Chrome or any Mac app.",
+  "keywords": [
+    "prompt-engineering",
+    "llm",
+    "chrome-extension",
+    "macos",
+    "claude",
+    "chatgpt",
+    "gemini"
+  ],
+  "author": "Denniela Souza",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "workspaces": [
+    "backend",
+    "extension",
+    "desktop"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w backend",
+    "build": "npm run build -w backend && npm run build -w extension && npm run build -w desktop",
+    "test": "npm test -w backend && npm test -w extension && npm test -w desktop",
+    "typecheck": "npm run typecheck -w backend && npm run typecheck -w extension && npm run typecheck -w desktop",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.15"
+  }
+}

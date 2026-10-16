@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prompt Refiner — editores ricos</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css">
+  <style>
+    :root { color-scheme: light; }
+    body { font: 15px/1.5 system-ui, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; }
+    h2 { font-size: 16px; margin: 28px 0 6px; }
+    .box { border: 1px solid #a1a1aa; border-radius: 8px; padding: 8px 10px; min-height: 90px; }
+    .box p { margin: 0 0 8px; }
+    .ProseMirror:focus, [data-lexical-editor]:focus { outline: 2px solid #8b5cf6; }
+    small { color: #71717a; }
+  </style>
+</head>
+<body>
+  <h1>Editores ricos (como ChatGPT, Claude e Gemini)</h1>
+  <p><small>Carrega Tiptap/ProseMirror (ChatGPT, Claude), Quill (Gemini) e Lexical de CDNs. Requer internet. Use para testar a extensão sem fazer login nos sites reais.</small></p>
+
+  <h2>Tiptap / ProseMirror</h2>
+  <div id="tiptap" class="box"></div>
+
+  <h2>Quill</h2>
+  <div id="quill"></div>
+
+  <h2>Lexical</h2>
+  <div id="lexical" class="box" contenteditable="true"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>
+  <script type="module">
+    import { Editor } from "https://esm.sh/@tiptap/core@2.11.5";
+    import StarterKit from "https://esm.sh/@tiptap/starter-kit@2.11.5";
+    import { createEditor, $getRoot, $createParagraphNode, $createTextNode } from "https://esm.sh/lexical@0.23.1";
+    import { registerRichText } from "https://esm.sh/@lexical/rich-text@0.23.1";
+    import { registerHistory, createEmptyHistoryState } from "https://esm.sh/@lexical/history@0.23.1";
+
+    const sample = "Antes. olha esse dashboard e ve o que ta ruim de ux. Depois.";
+
+    window.tiptap = new Editor({
+      element: document.getElementById("tiptap"),
+      extensions: [StarterKit],
+      content: `<p>Primeiro parágrafo.</p><p>${sample}</p><p>Último parágrafo.</p>`,
+    });
+
+    window.quill = new Quill("#quill", { theme: "snow" });
+    window.quill.setText(`Primeiro parágrafo.\n${sample}\nÚltimo parágrafo.\n`);
+
+    const lexical = createEditor({ namespace: "fixture", onError: (e) => console.error(e) });
+    lexical.setRootElement(document.getElementById("lexical"));
+    registerRichText(lexical);
+    registerHistory(lexical, createEmptyHistoryState(), 300);
+    lexical.update(() => {
+      const root = $getRoot();
+      for (const line of ["Primeiro parágrafo.", sample, "Último parágrafo."]) {
+        const p = $createParagraphNode();
+        p.append($createTextNode(line));
+        root.append(p);
+      }
+    });
+    window.lexical = lexical;
+    window.editorsReady = true;
+  </script>
+</body>
+</html>

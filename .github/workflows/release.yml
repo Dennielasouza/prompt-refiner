@@ -1,0 +1,42 @@
+name: Release
+
+# Builds the extension and attaches a ready-to-load zip to the GitHub release.
+# Trigger: push a tag, e.g. `git tag v0.1.0 && git push origin v0.1.0`.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: Package the extension
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -w backend
+      - run: npm test -w extension
+      - name: Build
+        run: npm run build -w extension
+      - name: Check the package
+        run: |
+          ! grep -q __promptRefinerTest extension/dist/*.js
+          node -e "const m=require('./extension/dist/manifest.json');
+            if (m.host_permissions) process.exit(1);
+            if (m.version !== process.env.GITHUB_REF_NAME.replace(/^v/, '')) {
+              console.error('manifest version', m.version, '!= tag', process.env.GITHUB_REF_NAME);
+              process.exit(1);
+            }"
+      - name: Zip
+        run: cd extension/dist && zip -r ../../prompt-refiner-extension-${{ github.ref_name }}.zip .
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: prompt-refiner-extension-${{ github.ref_name }}.zip
+          generate_release_notes: true

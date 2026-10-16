@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prompt Refiner — Configurações</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <header>
+      <img src="icons/48.png" alt="" width="32" height="32">
+      <div>
+        <h1>Prompt Refiner</h1>
+        <p class="lead">Selecione um texto em qualquer campo, clique com o botão direito e escolha <strong>Refinar prompt</strong> — ou <strong>Gerar arquivo de instruções</strong> para transformar anotações sobre um projeto em um CLAUDE.md ou AGENTS.md.</p>
+      </div>
+    </header>
+
+    <form id="form" novalidate>
+      <label for="endpoint">Endpoint da API</label>
+      <input id="endpoint" name="endpoint" type="url" placeholder="http://localhost:8787" required autocomplete="off" spellcheck="false">
+      <p class="hint" id="endpoint-hint">Endereço do backend do Prompt Refiner. As chaves de IA ficam no backend, nunca aqui.</p>
+
+      <label for="defaultTarget">Destino padrão</label>
+      <select id="defaultTarget" name="defaultTarget"></select>
+
+      <label for="defaultDepth" class="spaced">Profundidade padrão</label>
+      <select id="defaultDepth" name="defaultDepth">
+        <option value="balanced">Equilibrado — organiza e esclarece o que você escreveu</option>
+        <option value="deep">Profundo — acrescenta o método de um especialista</option>
+      </select>
+      <p class="hint">Destino e profundidade padrão são usados pelo atalho de teclado <kbd id="shortcut">Alt+Shift+R</kbd>. No menu de contexto você escolhe os dois a cada uso.</p>
+
+      <label for="format">Formato do prompt</label>
+      <select id="format" name="format">
+        <option value="markdown">Markdown (títulos, listas, blocos de código)</option>
+        <option value="auto">Automático (o destino decide; pode usar tags XML)</option>
+      </select>
+      <p class="hint">Vale para todo prompt refinado, pelo menu ou pelo atalho. CLAUDE.md e AGENTS.md são sempre gerados em Markdown.</p>
+
+      <div class="actions">
+        <button type="submit">Salvar</button>
+        <button type="button" id="test" class="secondary">Testar conexão</button>
+        <span id="status" class="status" role="status" aria-live="polite"></span>
+      </div>
+    </form>
+
+    <section class="last-problem" id="last-problem" hidden>
+      <h2>Último problema</h2>
+      <p><span id="last-problem-text"></span> <span class="hint" id="last-problem-time"></span></p>
+      <p class="hint">Se o menu do botão direito parou de funcionar depois de uma atualização, recarregue a extensão (↻) em <code>chrome://extensions</code>.</p>
+    </section>
+
+    <section class="privacy">
+      <h2>Privacidade</h2>
+      <p>Somente o texto que você selecionar é enviado ao backend (e o domínio da página, apenas no modo Automático). Nada é armazenado ou registrado pela extensão. Campos de senha são ignorados.</p>
+    </section>
+  </main>
+  <script src="options.js"></script>
+</body>
+</html>

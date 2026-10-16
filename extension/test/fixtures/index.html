@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prompt Refiner — fixture</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { font: 15px/1.5 system-ui, sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; }
+    label { display: block; font-weight: 600; margin: 20px 0 6px; }
+    input, textarea, [contenteditable] { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px; border: 1px solid #a1a1aa; border-radius: 8px; }
+    textarea { min-height: 120px; }
+    [contenteditable] { min-height: 100px; }
+    [contenteditable] p { margin: 0 0 8px; }
+    small { color: #71717a; }
+  </style>
+</head>
+<body>
+  <h1>Prompt Refiner — fixture de teste</h1>
+  <p><small>Selecione parte do texto de um campo → botão direito → <b>Refinar prompt</b> → escolha um destino. O texto antes e depois da seleção deve permanecer igual.</small></p>
+
+  <label for="input">&lt;input type="text"&gt;</label>
+  <input id="input" type="text" value="Antes. traduz isso pro ingles: bom dia equipe. Depois.">
+
+  <label for="textarea">&lt;textarea&gt;</label>
+  <textarea id="textarea">Contexto antes da seleção.
+olha esse dashboard e ve o que ta ruim de ux principalmente hierarquia visual e fala como melhorar sem inventar coisa
+Texto depois da seleção.</textarea>
+
+  <label for="ce">contenteditable</label>
+  <div id="ce" contenteditable="true"><p>Primeiro parágrafo (não deve mudar).</p><p>cria um endpoint de login no meu projeto express com jwt e testes, nao mexe no resto</p><p>Último parágrafo (não deve mudar).</p></div>
+
+  <label for="password">&lt;input type="password"&gt; (a extensão deve recusar)</label>
+  <input id="password" type="password" value="senha-de-teste">
+
+  <label for="react">Textarea controlado (simula React: reflete o valor só via eventos input)</label>
+  <textarea id="react">resume esse texto em 3 bullets</textarea>
+  <p><small>Valor no estado: <code id="react-state"></code></small></p>
+
+  <script>
+    // Minimal "controlled component": state only changes through input events.
+    const el = document.getElementById("react");
+    const out = document.getElementById("react-state");
+    let state = el.value;
+    out.textContent = state;
+    el.addEventListener("input", () => { state = el.value; out.textContent = state; });
+  </script>
+</body>
+</html>

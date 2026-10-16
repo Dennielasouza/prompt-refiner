@@ -1,0 +1,18 @@
+{
+  "name": "@prompt-refiner/desktop",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "macOS Services integration: refine selected text in any desktop app.",
+  "scripts": {
+    "build": "esbuild src/refine.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/refine.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts && node scripts/helper.mjs test",
+    "install-services": "npm run build && node scripts/services.mjs install",
+    "uninstall-services": "node scripts/services.mjs uninstall",
+    "install-hotkey": "node scripts/helper.mjs install",
+    "uninstall-hotkey": "node scripts/helper.mjs uninstall",
+    "test:helper": "node scripts/helper.mjs test"
+  },
+  "license": "MIT"
+}

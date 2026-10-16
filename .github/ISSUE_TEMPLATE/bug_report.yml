@@ -1,0 +1,80 @@
+name: Bug report
+description: Something does not work as described.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste your API key or the text of your prompts here.** Issues are public.
+        Describe what happened instead, and redact anything private.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Select text in ...
+        2. Right-click and choose ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen?
+      options:
+        - Chrome / Edge extension
+        - macOS Service (right-click or shortcut)
+        - Double tap on Option (the menu bar app)
+        - Backend only (install, startup, /api/refine)
+        - Other / not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Which engine are you using?
+      description: The value of PROMPT_COMPILER_PROVIDER in backend/.env.
+      options:
+        - claude-cli (Claude subscription)
+        - anthropic (API key)
+        - openai (API key)
+        - Not sure
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "macOS 15.6, Windows 11, Ubuntu 24.04 ..."
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Chrome or Edge version
+      description: From chrome://version. Leave empty if the browser is not involved.
+      placeholder: "Chrome 141.0.7390.55"
+  - type: textarea
+    id: health
+    attributes:
+      label: Output of the health check
+      description: |
+        Run `curl -s http://127.0.0.1:8787/api/health` and paste the result.
+        It contains no text and no keys.
+      render: json
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: |
+        Metadata log lines, screenshots, or the message shown in the notice.
+        **Do not include prompt text or API keys.**

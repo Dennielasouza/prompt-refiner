@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Prompt Refiner",
+  "version": "0.1.0",
+  "description": "Transforme o texto que você selecionou em um prompt otimizado para ChatGPT, Claude, Gemini, Codex ou Claude Code.",
+  "minimum_chrome_version": "120",
+  "permissions": ["contextMenus", "activeTab", "scripting", "storage"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_page": "options.html",
+  "action": {
+    "default_title": "Prompt Refiner — configurações",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png"
+    }
+  },
+  "commands": {
+    "refine-default": {
+      "suggested_key": {
+        "default": "Alt+Shift+R"
+      },
+      "description": "Refinar a seleção com o destino padrão"
+    }
+  },
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  }
+}

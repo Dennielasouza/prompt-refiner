@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Backend + extension (unit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck -w backend
+      - run: npm run typecheck -w extension
+      - run: npm test -w backend
+      - run: npm test -w extension
+      - name: Production build is clean (no test hooks, no host permissions)
+        run: |
+          npm run build -w extension
+          ! grep -q __promptRefinerTest extension/dist/*.js
+          node -e "const m=require('./extension/dist/manifest.json');
+            if (m.host_permissions) { console.error('host_permissions leaked into the package:', m.host_permissions); process.exit(1); }
+            if (m.description.length > 132) { console.error('description too long for the store:', m.description.length); process.exit(1); }
+            console.log('package ok:', m.permissions.join(', '));"
+
+  e2e:
+    name: Extension end-to-end (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e -w extension
+
+  desktop:
+    name: macOS integration (TypeScript + Swift)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w desktop
+      - run: npm test -w desktop
