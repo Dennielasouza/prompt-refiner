@@ -34,7 +34,7 @@ The engine that *refines* and the destination you are *writing for* are independ
 
 ## Requirements
 
-- **Node.js 22 or newer**, and npm.
+- **Node.js 22 or newer**, and npm — check with `node --version`.
 - **Google Chrome or Microsoft Edge 120 or newer** for the browser part.
 - **One AI engine** — either your Claude subscription or your own API key. Both are explained below; you don't need both.
 - **macOS** for the desktop integration (macOS Services and the ⌥⌥ menu bar app; the ⌥⌥ app also needs the Xcode Command Line Tools, for `swiftc`). The extension and the backend themselves are not macOS-only, but the project is developed and tested on macOS — on Windows and Linux you run the backend in a terminal instead of installing it as a service.
@@ -43,6 +43,26 @@ The engine that *refines* and the destination you are *writing for* are independ
 > Not published on the Chrome Web Store yet, so the extension is loaded unpacked, in developer mode. That's the honest trade-off of this release — see the [roadmap](#roadmap).
 
 ## Install
+
+**In a hurry?** If you already pay for Claude and have [Claude Code](https://code.claude.com) signed in, this is the whole thing:
+
+```bash
+git clone https://github.com/Dennielasouza/prompt-refiner.git && cd prompt-refiner
+npm install
+cp backend/.env.example backend/.env     # already set to your Claude subscription
+npm run dev                              # leave it running
+```
+
+Then, in another terminal, check it answers and refine something:
+
+```bash
+curl -s http://127.0.0.1:8787/api/health
+curl -s -X POST http://127.0.0.1:8787/api/refine \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"me da 10 ideias de nome pra uma cafeteria pet friendly","target":"chatgpt"}'
+```
+
+If a refined prompt comes back, the engine works. Everything below is the same thing explained slowly, plus the browser extension and the Mac integration.
 
 ### 1. Clone and install
 
@@ -150,6 +170,16 @@ curl -s http://127.0.0.1:8787/api/health
 
 You should see `"status":"ok"` and the provider you chose. If it says `misconfigured`, the message tells you which variable is missing.
 
+Now prove the engine itself works, without touching the browser yet:
+
+```bash
+curl -s -X POST http://127.0.0.1:8787/api/refine \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"me da 10 ideias de nome pra uma cafeteria pet friendly","target":"chatgpt"}'
+```
+
+A refined prompt should come back in a few seconds. If this works, everything after it is about getting that same call to happen from a right-click.
+
 On a machine without the macOS service (Windows, Linux) and for a non-reloading run, build once and start it: `npm run build -w backend && npm start -w backend`.
 
 To remove the macOS service later: `npm run uninstall-service -w backend` (it also deletes its copy of your `.env`).
@@ -163,6 +193,10 @@ npm run build -w extension
 1. Open `chrome://extensions` (Edge: `edge://extensions`).
 2. Turn on **Developer mode**.
 3. Click **Load unpacked** and pick the `extension/dist` folder.
+
+*Load unpacked* means Chrome runs the extension straight from that folder instead of from the Web Store: nothing is verified by Google, it does not auto-update, and Chrome may ask you to confirm it after a restart. You are trusting the code in the folder — which is why it is all here to read.
+
+> **If you installed the backend as a macOS service**, run `npm run install-service -w backend` once more now. The service locks CORS to your extension's ID, and that ID is derived from the absolute path of `extension/dist` — which only exists after the build you just ran. Run it again whenever you move the project folder or load the extension from somewhere else.
 
 The settings page opens on the first install (you can reopen it by clicking the extension's icon). Check that the **Endpoint da API** is `http://127.0.0.1:8787` (if you changed `PORT` in `.env`, use that port here too) and click **Testar conexão** — it should say *Conectado*.
 
@@ -266,7 +300,7 @@ Two places, and they do different things.
 | `PORT` / `HOST` | no | Defaults `8787` and `127.0.0.1` (reachable only from your own machine). |
 | `PROMPT_COMPILER_TIMEOUT_MS` | no | Timeout of the engine call (default `45000`). |
 | `PROMPT_COMPILER_MAX_TOKENS` | no | Output cap for the refiner model (default `16000`). |
-| `ALLOWED_ORIGINS` | no | Accepted CORS origins, comma-separated (default `chrome-extension://*`). `install-service` narrows this to your own unpacked extension's ID unless you set it yourself. |
+| `ALLOWED_ORIGINS` | no | Accepted CORS origins, comma-separated (default `chrome-extension://*`). `install-service` narrows this to your own unpacked extension's ID unless you set it yourself. CORS is a browser rule, so it only restricts pages and extensions: a request with no `Origin` header — `curl`, or the macOS Services and the ⌥⌥ app — is accepted by design. What keeps the backend private is that it listens on `127.0.0.1` only. |
 | `ANTHROPIC_REFUSAL_FALLBACK` | no | On Claude 5.x models, retries a refused request on a fallback model. On by default; `false` disables it. |
 
 ### What each refinement cost you
@@ -282,6 +316,19 @@ npm run usage -w backend -- --detalhes    # with tokens and cache details
 That history is the backend's own log at `~/Library/Logs/PromptRefiner/backend.log`, written when it runs as a macOS service. It lives outside the project and holds metadata only — tokens, timings, costs, never prompt text. Delete the file to clear it; `npm run uninstall-service -w backend` removes the service and its copy of your `.env`, but leaves the log.
 
 Subscription calls (`claude-cli`) are listed separately, at US$ 0, with the value they *would* have cost on the API for comparison. The prices used for the estimates live in `backend/src/config/pricing.ts`; unknown models get no estimate.
+
+## Uninstalling
+
+Everything lives in the project folder plus, on macOS, two LaunchAgents and a log. To remove it all:
+
+```bash
+npm run uninstall-hotkey -w desktop     # the ⌥⌥ menu bar app
+npm run uninstall-services -w desktop   # the macOS Services
+npm run uninstall-service -w backend    # the backend service (also deletes its copy of your .env)
+rm ~/Library/Logs/PromptRefiner/backend.log   # the usage log, if you want it gone
+```
+
+Then remove the extension in `chrome://extensions`, and delete the project folder. Nothing is left outside it. Also remove **Prompt Refiner** from System Settings → Privacy & Security → Accessibility if you had granted it there.
 
 ## Troubleshooting
 
@@ -364,6 +411,8 @@ desktop/     macOS: src/refine.ts (the CLI the Services call), scripts/services.
 
 `200` returns `{ refinedPrompt, target, depth, format, kind, taskType, complexity, strategies, warnings }` (`strategies` is always `[]`, kept for compatibility). Errors return `{ "error": { "code", "message" } }`: `400` invalid input · `403` origin not allowed · `413` text over 12,000 characters · `415` not JSON · `422` the model refused · `502` provider error or invalid model output · `503` backend not configured, or rate-limited · `504` timeout.
 
+`warnings` is a short list of snake_case codes, meant for a client to act on rather than for an end user to read. Three come from the backend's own checks and are a fixed set: `quality:possible_inflation`, `quality:language_drift:<from>-><to>` and `quality:mojibake`. The rest are written by the engine for the case at hand (`ambiguous_scope`, `not_a_prompt`, `missing_vacation_dates`, …) — **there is no fixed list of those**, so treat an unknown code as informational. The extension does not show them today.
+
 `GET /api/health` reports status, provider and the compiler version.
 
 ### Replacement
@@ -378,16 +427,17 @@ The selection is captured synchronously the moment you click, before the async c
 
 ```bash
 npm install
-npm test                        # unit tests of the three workspaces (desktop compiles Swift — macOS only)
+npm test                        # unit tests of the three workspaces (desktop compiles Swift with swiftc — macOS + Xcode Command Line Tools)
 npm run typecheck
 npm run lint                    # Biome (lint + format check); npm run lint:fix applies safe fixes
 npm run build
 npm run test:e2e -w extension   # Playwright + Chromium with the real extension
 npm run eval -w backend         # the 18-case eval against the real engine
-npm run usage -w backend        # cost report
+npm run usage -w backend        # cost report (needs the macOS service — see below)
 ```
 
-- On Linux and Windows, run the unit tests per workspace: `npm test -w backend && npm test -w extension`.
+- On Linux and Windows, run the unit tests per workspace: `npm test -w backend && npm test -w extension`. The same applies on a Mac without the Xcode Command Line Tools, since the desktop workspace compiles Swift.
+- `npm run usage -w backend` reads the log the **macOS service** writes. Running the backend with `npm run dev` logs to the terminal instead, so the report will be empty.
 - The e2e suite needs Playwright's Chromium once (`npx playwright install chromium`). It loads the real extension against a real backend with a deterministic fake provider, so it costs nothing.
 - `npm run eval -w backend` makes real calls: it costs API money on `anthropic`/`openai`, and counts against your plan on `claude-cli`. Filter by case name with `npm run eval -w backend -- FILE`.
 - Manual test pages: `extension/test/fixtures/index.html` (input, textarea, contenteditable, a password field, a React-style textarea) and `editors.html` (Tiptap/ProseMirror, Quill, Lexical). Serve them with any static server, e.g. `npx http-server extension/test/fixtures -p 5500`.
