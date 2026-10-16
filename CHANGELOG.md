@@ -107,5 +107,5 @@ runs on the user's own machine.
   `input type="email"` / `number` are not supported.
 - Undo does not survive a page reload, by design.
 
-[Unreleased]: https://github.com/Dennielasouza/prompt-refiner/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/Dennielasouza/prompt-refiner/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Dennielasouza/prompt-refiner/commits/main
+[0.1.0]: https://github.com/Dennielasouza/prompt-refiner/commits/main

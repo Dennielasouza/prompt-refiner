@@ -62,7 +62,7 @@ never anything else about your browsing. Requests are capped at 12,000 character
 ### 3.3 Where it is sent
 
 The extension sends the request to the address configured on its own settings page. The default
-is `http://localhost:8787` — a program running on your own computer — so that request does not
+is `http://127.0.0.1:8787` — a program running on your own computer — so that request does not
 leave your machine. Plain `http://` is accepted **only** for local addresses (`localhost`,
 `127.0.0.1`, `[::1]`, `*.localhost`); any other address must be `https://`. If you point the
 setting at a server somewhere else, your text goes to that server and that is your decision and
@@ -226,7 +226,7 @@ sobre a sua navegação. Cada pedido é limitado a 12.000 caracteres de texto.
 ### 3.3 Para onde é enviado
 
 A extensão envia o pedido para o endereço configurado na própria página de configurações dela.
-O padrão é `http://localhost:8787` — um programa rodando no seu próprio computador — então esse
+O padrão é `http://127.0.0.1:8787` — um programa rodando no seu próprio computador — então esse
 pedido não sai da sua máquina. O `http://` simples é aceito **apenas** para endereços locais
 (`localhost`, `127.0.0.1`, `[::1]`, `*.localhost`); qualquer outro endereço precisa ser
 `https://`. Se você apontar a configuração para um servidor em outro lugar, o seu texto vai
