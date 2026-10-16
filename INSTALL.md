@@ -4,7 +4,7 @@
 
 This is the install guide, and nothing else. What Prompt Refiner does, how to configure it and how it works inside are in the [README](README.md).
 
-It is **two commands** plus two things you do with the mouse. About 5 minutes.
+It is **one command** plus two things you do with the mouse. About 3 minutes.
 
 > **Interface language:** the extension's menus, the settings page, the installer's output and the macOS messages are in Brazilian Portuguese. Your prompts are refined in whatever language you wrote them in.
 
@@ -31,29 +31,33 @@ You need:
 
 ---
 
-## Step 1 — Download the project
+## Install — one command
+
+Open the **Terminal** app, paste the line below and press Enter:
 
 ```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner
+curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
-This creates a `prompt-refiner` folder in your home directory.
+That's it. It downloads the project, installs everything, starts the backend and finishes by **refining a real sentence** so you can see it work. Six numbered stages along the way.
 
-> **If you see `destination path ... already exists`**, that is not an error: the folder was downloaded earlier. Go to step 2.
+> **Copying:** hover over the grey block and use the **copy button** in its corner. The ``` backticks on screen are **not part of the command**.
 
-## Step 2 — Install
+If you would rather read the script before running it — which is what I'd do with any command from the internet — download and open it first:
+
+```bash
+git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner && open ~/prompt-refiner/instalar.sh
+```
+
+then run:
 
 ```bash
 cd ~/prompt-refiner && ./instalar.sh
 ```
 
-The installer does the rest: dependencies, configuration, the extension build, the backend, the Mac shortcuts — and it finishes by **refining a real sentence** so you can see it work.
-
-**What to expect:** six numbered stages. Plenty of lines scroll past during the second one; that is normal. At the end it prints the refined prompt from its test and a list of what is left.
-
 **If it stops**, the message says why and what to do. You can run it as many times as you like: it detects what is already in place and skips it.
 
-## Step 3 — Load the extension in Chrome
+## Step 2 — Load the extension in Chrome
 
 The installer cannot do this one: Chrome only accepts it through the interface.
 
@@ -64,7 +68,7 @@ The installer cannot do this one: Chrome only accepts it through the interface.
 
 *Load unpacked* means Chrome runs the extension straight from that folder instead of from the Web Store. Nothing is verified by Google and it does not auto-update — you are trusting the code in that folder, which is all here to read.
 
-## Step 4 — Allow the ⌥⌥ shortcut *(Mac only)*
+## Step 3 — Allow the ⌥⌥ shortcut *(Mac only)*
 
 1. Open **System Settings › Privacy & Security › Accessibility**
 2. If **Prompt Refiner** is already listed, remove it with the **−** button
@@ -89,11 +93,11 @@ The selected text is replaced by the refined prompt, right where it was. If anyt
 |---|---|
 | The prompt became `bash-3.2$` and a message about zsh appeared | The ``` backticks were copied along. Type `exit`, press Enter, and copy the command with the block's copy button |
 | `command not found: node` | Node is not installed. Get the LTS build from [nodejs.org](https://nodejs.org) |
-| `destination path ... already exists` | The folder is already there from an earlier try. Go to step 2 |
+| `destination path ... already exists` | Only happens if you clone by hand: the folder is there from an earlier try. Run `cd ~/prompt-refiner && ./instalar.sh`. The one-command install handles this itself |
 | The installer says Claude Code is not signed in | Run `claude`, type `/login`, pick the account with a subscription, then `/exit` |
 | The installer says the port is in use | Something else holds 8787. Open `backend/.env`, change the `PORT=` line, and run the installer again |
 | The extension says *Desconectado* | Check that the port in **Endpoint da API** matches `backend/.env`. If you moved the project folder, run the installer again |
-| ⌥⌥ does nothing | Accessibility is not granted, or it was granted to an older build. Redo step 4, removing with **−** before adding |
+| ⌥⌥ does nothing | Accessibility is not granted, or it was granted to an older build. Redo step 3, removing with **−** before adding |
 | ⌥⌥ opens Claude's quick entry | The Claude app uses the same gesture. Turn it off in Claude › Settings › System |
 
 **To see what the backend logged:**

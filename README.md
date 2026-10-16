@@ -44,14 +44,10 @@ The engine that *refines* and the destination you are *writing for* are independ
 
 ## Install
 
-**→ The step-by-step guide is in [INSTALL.md](INSTALL.md).** Two commands, about five minutes:
+**→ The step-by-step guide is in [INSTALL.md](INSTALL.md).** One command, about three minutes:
 
 ```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner
-```
-
-```bash
-cd ~/prompt-refiner && ./instalar.sh
+curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
 The installer handles dependencies, configuration, the extension build, the backend and the Mac shortcuts, then refines a real sentence so you can see it work. Two things stay manual, because Chrome and macOS only accept them through their own interfaces: loading the unpacked extension, and granting Accessibility for the ⌥⌥ gesture. [INSTALL.md](INSTALL.md) covers both, plus what to do when something goes wrong.

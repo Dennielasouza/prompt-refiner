@@ -9,7 +9,37 @@
 # Mensagens em português, como o resto do que a pessoa vê.
 set -uo pipefail
 
-cd "$(dirname "$0")"
+# --- Modo "um comando só" -----------------------------------------------------
+# Quando este script chega pelo curl, ele não está dentro do projeto. Nesse caso ele
+# baixa o projeto e se reexecuta de lá, para a pessoa não precisar de dois comandos.
+AQUI="$(cd "$(dirname "$0")" 2>/dev/null && pwd || echo .)"
+DESTINO="${PROMPT_REFINER_DIR:-$HOME/prompt-refiner}"
+if ! grep -q '"name": "prompt-refiner"' "$AQUI/package.json" 2>/dev/null; then
+  printf '\n\033[1mBaixando o Prompt Refiner\033[0m\n'
+  if ! command -v git >/dev/null 2>&1; then
+    printf '\n\033[1m✖ O git não está instalado.\033[0m\n' >&2
+    printf '  Rode:  xcode-select --install\n  Depois rode este comando de novo.\n' >&2
+    exit 1
+  fi
+  if [ -d "$DESTINO/.git" ]; then
+    printf '  ✓ Já estava baixado em %s — atualizando\n' "$DESTINO"
+    git -C "$DESTINO" pull --quiet --ff-only 2>/dev/null || printf '  ! Não consegui atualizar; sigo com o que já está aí.\n'
+  elif [ -e "$DESTINO" ]; then
+    printf '\n\033[1m✖ Já existe algo em %s que não é o projeto.\033[0m\n' "$DESTINO" >&2
+    printf '  Renomeie ou apague essa pasta, ou escolha outro lugar:\n' >&2
+    printf '  PROMPT_REFINER_DIR=~/outra-pasta  e rode de novo.\n' >&2
+    exit 1
+  else
+    git clone --quiet "https://github.com/Dennielasouza/prompt-refiner.git" "$DESTINO" || {
+      printf '\n\033[1m✖ Não consegui baixar o projeto.\033[0m\n  Confira sua conexão com a internet.\n' >&2
+      exit 1
+    }
+    printf '  ✓ Baixado em %s\n' "$DESTINO"
+  fi
+  exec bash "$DESTINO/instalar.sh" "$@"
+fi
+
+cd "$AQUI"
 APENAS_BACKEND=false
 [ "${1:-}" = "--so-backend" ] && APENAS_BACKEND=true
 MACOS=false

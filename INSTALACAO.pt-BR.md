@@ -4,7 +4,7 @@
 
 Este é o guia da instalação, e só isso. O que o Prompt Refiner faz, como configurar e como funciona por dentro está no [README](README.pt-BR.md).
 
-São **dois comandos** e mais duas coisas feitas no mouse. Leva uns 5 minutos.
+É **um comando** e mais duas coisas feitas no mouse. Leva uns 3 minutos.
 
 ---
 
@@ -29,29 +29,33 @@ Você vai precisar de:
 
 ---
 
-## Passo 1 — Baixar o projeto
+## Instalar — um comando
+
+Abra o app **Terminal**, cole a linha abaixo e aperte Enter:
 
 ```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner
+curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
-Isso cria a pasta `prompt-refiner` dentro da sua pasta pessoal.
+É só isso. Ele baixa o projeto, instala tudo, liga o backend e termina **refinando uma frase de verdade** para você ver funcionando. Mostra 6 etapas numeradas pelo caminho.
 
-> **Se aparecer `destination path ... already exists`**, não é erro: quer dizer que a pasta já foi baixada antes. Pode seguir para o passo 2.
+> **Copiando:** passe o mouse sobre o bloco cinza e use o **botão de copiar** no canto. As crases ``` que aparecem na tela **não fazem parte do comando**.
 
-## Passo 2 — Instalar
+Se preferir ler o script antes de rodar — é o que eu faria com qualquer comando da internet — baixe e abra primeiro:
+
+```bash
+git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner && open ~/prompt-refiner/instalar.sh
+```
+
+e depois rode:
 
 ```bash
 cd ~/prompt-refiner && ./instalar.sh
 ```
 
-O instalador faz o resto sozinho: baixa as peças, cria a configuração, gera a extensão, liga o backend, instala os atalhos do Mac e termina **refinando um texto de verdade** para você ver funcionando.
-
-**O que esperar na tela:** ele mostra 6 etapas numeradas. Várias linhas passam durante a segunda, e isso é normal. No fim aparece o prompt refinado do teste e uma lista do que falta.
-
 **Se ele parar no meio**, a mensagem diz o motivo e o que fazer. Pode rodar de novo quantas vezes quiser: ele detecta o que já está pronto e não repete.
 
-## Passo 3 — Carregar a extensão no Chrome
+## Passo 2 — Carregar a extensão no Chrome
 
 Isso o instalador não consegue fazer: o Chrome só aceita no mouse.
 
@@ -62,7 +66,7 @@ Isso o instalador não consegue fazer: o Chrome só aceita no mouse.
 
 *Carregar sem compactação* quer dizer que o Chrome roda a extensão direto dessa pasta, em vez de pegá-la na loja. Nada é verificado pelo Google e ela não se atualiza sozinha — você está confiando no código dessa pasta, que está todo aberto para leitura.
 
-## Passo 4 — Liberar o atalho ⌥⌥ *(só no Mac)*
+## Passo 3 — Liberar o atalho ⌥⌥ *(só no Mac)*
 
 1. Abra **Ajustes do Sistema › Privacidade e Segurança › Acessibilidade**
 2. Se o **Prompt Refiner** já estiver na lista, remova com o botão **−**
@@ -87,11 +91,11 @@ O texto selecionado é substituído pelo prompt refinado, ali mesmo. Se algo fal
 |---|---|
 | O terminal virou `bash-3.2$` e apareceu um aviso sobre zsh | As crases ``` foram copiadas junto. Digite `exit`, aperte Enter e copie o comando usando o botão de copiar do bloco |
 | `command not found: node` | O Node não está instalado. Baixe a versão LTS em [nodejs.org](https://nodejs.org) |
-| `destination path ... already exists` | A pasta já existe de uma tentativa anterior. Siga para o passo 2 |
+| `destination path ... already exists` | Só aparece se você clonar à mão: a pasta já existe de uma tentativa anterior. Rode `cd ~/prompt-refiner && ./instalar.sh`. Pelo comando único isso é tratado sozinho |
 | O instalador diz que o Claude Code não está logado | Rode `claude` no terminal, digite `/login`, escolha a conta com assinatura e depois `/exit` |
 | O instalador diz que a porta já está em uso | Outro programa ocupa a 8787. Abra `backend/.env`, mude a linha `PORT=` e rode o instalador de novo |
 | A extensão diz *Desconectado* | Veja se a porta no campo **Endpoint da API** é a mesma do `backend/.env`. Se você moveu a pasta do projeto, rode o instalador de novo |
-| O ⌥⌥ não faz nada | A Acessibilidade não está concedida, ou foi concedida a uma versão antiga do app. Refaça o passo 4, removendo com **−** antes de adicionar |
+| O ⌥⌥ não faz nada | A Acessibilidade não está concedida, ou foi concedida a uma versão antiga do app. Refaça o passo 3, removendo com **−** antes de adicionar |
 | O ⌥⌥ abre a entrada rápida do Claude | O app do Claude usa o mesmo atalho. Desligue em Claude › Ajustes › Sistema |
 
 **Para ver o que o backend registrou:**

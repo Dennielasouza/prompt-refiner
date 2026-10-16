@@ -44,14 +44,10 @@ O motor que *refina* e o destino para o qual você está *escrevendo* são indep
 
 ## Instalação
 
-**→ O passo a passo está em [INSTALACAO.pt-BR.md](INSTALACAO.pt-BR.md).** São dois comandos, uns cinco minutos:
+**→ O passo a passo está em [INSTALACAO.pt-BR.md](INSTALACAO.pt-BR.md).** Um comando, uns três minutos:
 
 ```bash
-git clone https://github.com/Dennielasouza/prompt-refiner.git ~/prompt-refiner
-```
-
-```bash
-cd ~/prompt-refiner && ./instalar.sh
+curl -fsSL https://raw.githubusercontent.com/Dennielasouza/prompt-refiner/main/instalar.sh | bash
 ```
 
 O instalador cuida das dependências, da configuração, da extensão, do backend e dos atalhos do Mac, e no fim refina uma frase de verdade para você ver funcionando. Duas coisas continuam manuais, porque o Chrome e o macOS só aceitam pela interface deles: carregar a extensão e liberar a Acessibilidade do gesto ⌥⌥. O [guia de instalação](INSTALACAO.pt-BR.md) cobre as duas, e também o que fazer quando algo dá errado.
