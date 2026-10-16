@@ -11,8 +11,8 @@
 # Privacy Policy — Prompt Refiner
 
 **Version covered:** 0.1.0 · **Effective:** from the first public release
-**Source code:** https://github.com/<github-user>/prompt-refiner
-**Contact:** open an issue, or use the contact details on https://github.com/<github-user> · for security problems, use the private reporting link described in [SECURITY.md](SECURITY.md) instead of a public issue.
+**Source code:** https://github.com/Dennielasouza/prompt-refiner
+**Contact:** open an issue, or use the contact details on https://github.com/Dennielasouza · for security problems, use the private reporting link described in [SECURITY.md](SECURITY.md) instead of a public issue.
 
 ## 1. Who is responsible
 
@@ -171,8 +171,8 @@ in [CHANGELOG.md](CHANGELOG.md).
 
 **Versão coberta:** 0.1.0 · **Em vigor:** desde a primeira versão pública
 **Última atualização:** 15/10/2026
-**Código-fonte:** https://github.com/<github-user>/prompt-refiner
-**Contato:** abra uma issue, ou use os contatos do perfil https://github.com/<github-user> · para problemas de segurança, use o canal privado descrito no [SECURITY.md](SECURITY.md), em vez de abrir uma issue pública.
+**Código-fonte:** https://github.com/Dennielasouza/prompt-refiner
+**Contato:** abra uma issue, ou use os contatos do perfil https://github.com/Dennielasouza · para problemas de segurança, use o canal privado descrito no [SECURITY.md](SECURITY.md), em vez de abrir uma issue pública.
 
 > Este texto descreve a versão **0.1.0**, a primeira versão pública, distribuída como
 > código-fonte no GitHub. Não é parecer jurídico.

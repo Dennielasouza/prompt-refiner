@@ -48,7 +48,7 @@ The engine that *refines* and the destination you are *writing for* are independ
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/<github-user>/prompt-refiner.git
+git clone https://github.com/Dennielasouza/prompt-refiner.git
 cd prompt-refiner
 npm install
 ```

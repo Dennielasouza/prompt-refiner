@@ -48,7 +48,7 @@ O motor que *refina* e o destino para o qual você está *escrevendo* são indep
 ### 1. Clone e instale
 
 ```bash
-git clone https://github.com/<github-user>/prompt-refiner.git
+git clone https://github.com/Dennielasouza/prompt-refiner.git
 cd prompt-refiner
 npm install
 ```

@@ -60,7 +60,7 @@ representative at an online or offline event.
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported privately to the maintainer through the contact details on
-**https://github.com/<github-user>**. For anything sensitive, you can also use
+**https://github.com/Dennielasouza**. For anything sensitive, you can also use
 GitHub's private vulnerability reporting, described in [SECURITY.md](SECURITY.md).
 All complaints will be reviewed and investigated promptly and fairly.
 
