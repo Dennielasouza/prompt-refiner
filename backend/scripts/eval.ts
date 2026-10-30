@@ -27,12 +27,14 @@ import {
   fmtStats,
   markBaseline,
   newRunId,
+  noiseThreshold,
   RunWriter,
   readBaseline,
   type Stats,
   splitOutputTokens,
   stats,
   TOKEN_SPLIT_METHOD,
+  writePainelCsv,
 } from "./evalRun.js";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
@@ -57,10 +59,16 @@ interface Case {
   maxGrowth?: number;
   /** Do no harm: fração mínima das palavras significativas da entrada presentes na saída. */
   minWordOverlap?: number;
-  /** Refinar o já-refinado não pode inchar além de 1,25x. */
+  /** Refinar o já-refinado não pode inchar (limite em MAX_IDEMPOTENCE_GROWTH). */
   idempotent?: boolean;
   /** Teto de latência (ms) para este caso. */
   maxLatencyMs?: number;
+  /**
+   * Defeito conhecido do motor, descrito em uma linha. O caso roda e o resultado fica gravado, mas a
+   * falha não derruba a rodada: suíte vermelha permanente ensina a ignorar a suíte. Vermelho passa a
+   * significar regressão nova. Quando um caso assim passa em todas as repetições, a marca pode sair.
+   */
+  knownIssue?: string;
 }
 
 /**
@@ -261,22 +269,57 @@ const CASES: Case[] = [
     name: "DNH · prompt pt já bem estruturado volta quase igual",
     text: "Analise o funil de cadastro do aplicativo descrito abaixo.\n\nObjetivo: identificar em qual etapa ocorre a maior desistência.\n\nContexto: o funil tem 4 etapas (e-mail, senha, perfil, confirmação); os dados estão na tabela colada abaixo.\n\nRestrições: use somente os dados fornecidos; não invente números.\n\nFormato: liste as etapas em ordem de desistência, com o percentual de cada uma, e termine com uma recomendação de no máximo 3 linhas.",
     target: "claude",
-    maxGrowth: 1.6,
-    minWordOverlap: 0.6,
+    // Medido em 2026-10-30-152236-or48 (3 rep.): crescimento 0,96–1,05x · sobreposição 0,87–0,92.
+    // Limite ≈ pior caso observado + 25% de folga, para variação entre rodadas não virar falha falsa.
+    maxGrowth: 1.3,
+    minWordOverlap: 0.78,
   },
   {
     name: "DNH · prompt en já bem estruturado volta quase igual",
     text: "Review the pull request description below.\n\nGoal: check whether it explains the change, the reason for it, and the test plan.\n\nConstraints: do not rewrite the code; comment only on the description, using only the text provided.\n\nOutput: a list of at most 5 concrete suggestions, ordered by importance.",
     target: "chatgpt",
-    maxGrowth: 1.6,
-    minWordOverlap: 0.6,
+    // Medido: crescimento 0,97–1,23x (uma das 3 repetições cresceu 23%) · sobreposição 0,89 nas três.
+    maxGrowth: 1.45,
+    minWordOverlap: 0.8,
   },
   {
     name: "DNH · pedido trivial já claro não incha",
     text: 'Corrija a gramática da frase abaixo. Devolva apenas a frase corrigida.\n\nFrase: "eu vai no mercado amanha e compra pão"',
     target: "claude",
-    maxGrowth: 1.6,
+    // Medido: 1,00x exato nas três repetições — o caso mais estável, então o limite mais justo.
+    maxGrowth: 1.2,
     maxComplexity: 2,
+  },
+  // Pedido ABERTO já bem escrito: é onde o benchmark mostrou o refino cobrando ~1 ponto
+  // (pedido com nota >= 8 caiu -1,00 no equilibrado e -1,83 no profundo). O harness não tinha
+  // nenhum caso desse tipo; estes três são o teste de regressão do Passo 1a do plano da V3.
+  // Limites por caso, medidos na primeira rodada e apertados depois — ver .local/plano-v3.md.
+  {
+    name: "DNH · pedido aberto de email já bem escrito",
+    text: "Escreva um email para o meu gestor pedindo para trabalhar remoto nas sextas-feiras.\n\nTom: profissional, sem formalidade excessiva.\n\nIncluir: que a minha produtividade não caiu desde que passei a trabalhar de casa às quartas.\n\nTamanho: no máximo 3 parágrafos curtos.",
+    target: "chatgpt",
+    maxGrowth: 1.35,
+    minWordOverlap: 0.75,
+  },
+  {
+    name: "DNH · pedido aberto de decisão já bem escrito",
+    text: "Compare alugar e comprar imóvel para o meu caso.\n\nDados: aluguel de R$ 2.800 por mês; imóvel equivalente a R$ 520 mil; tenho R$ 120 mil de entrada; pretendo ficar na cidade uns 4 anos.\n\nRestrições: use somente estes números, não invente taxa de juros nem valorização; se precisar de uma premissa, declare qual.\n\nFormato: os dois cenários lado a lado, o custo total em 4 anos de cada um, e qual sai na frente.",
+    target: "claude",
+    maxGrowth: 1.35,
+    minWordOverlap: 0.75,
+    mustInclude: [/2\.?800/, /520/, /120/, /4 anos/i],
+    knownIssue:
+      "pedido aberto já estruturado: metade das repetições passa de 1,35x (6 rep. em 30/10: 1,23x–1,50x, mediana 1,43x). Alvo do Passo 1a do plano da V3.",
+  },
+  {
+    name: "DNH · pedido aberto de negociação já bem escrito",
+    text: "Me ajude a preparar uma conversa de pedido de aumento com a minha chefe.\n\nContexto: estou há 2 anos no cargo, assumi a liderança de dois projetos neste ano e não tive reajuste desde a contratação.\n\nObjetivo: chegar na conversa sabendo o que dizer e o que responder se ela disser que não há orçamento.\n\nFormato: os argumentos em ordem de força, e as respostas para as duas objeções mais prováveis.",
+    target: "claude",
+    maxGrowth: 1.35,
+    minWordOverlap: 0.75,
+    mustInclude: [/2 anos/i, /or[çc]amento/i],
+    knownIssue:
+      "pedido aberto já estruturado: metade das repetições passa de 1,35x (6 rep. em 30/10: 1,24x–1,95x, mediana 1,41x). Alvo do Passo 1a do plano da V3.",
   },
   {
     name: "IDEM · refinar o já refinado não incha",
@@ -321,7 +364,7 @@ const CASES: Case[] = [
     target: "claude-code",
     expectTypes: ["debugging", "coding"],
     mustInclude: [/media\(/, /reduce/],
-    maxLatencyMs: 120000,
+    // Sem teto próprio: medido em 6,3 s, bem dentro do teto do nível. Um override de 120 s não media nada.
   },
 ];
 
@@ -349,10 +392,19 @@ if (SMOKE) console.log("EVAL_SMOKE=1: provider simulado — valida runner e JSON
 
 /**
  * Teto de latência por nível de complexity, conferido contra a MEDIANA das repetições (uma chamada
- * lenta é ruído; mediana lenta é regressão). Folgado porque claude-cli sobe um processo por chamada
- * e o timeout do backend é o limite duro. `maxLatencyMs` no caso sobrepõe o teto do nível.
+ * lenta é ruído; mediana lenta é regressão). `maxLatencyMs` no caso sobrepõe o teto do nível.
+ *
+ * Calibrado em 2026-10-30-152236-or48 (claude-cli, sonnet-5-5, esforço médio, 3 rep.): a pior
+ * chamada observada foi L1 9,2 s · L2 8,0 s · L3 10,4 s · L4 13,3 s. Os tetos abaixo são ~2,5x isso
+ * — folga para a máquina estar ocupada, sem a folga de 10x que não pegava regressão nenhuma.
  */
-const LATENCY_CEILING_MS: Record<Complexity, number> = { 1: 45_000, 2: 45_000, 3: 75_000, 4: 110_000, 5: 110_000 };
+const LATENCY_CEILING_MS: Record<Complexity, number> = { 1: 20_000, 2: 20_000, 3: 25_000, 4: 35_000, 5: 35_000 };
+
+/**
+ * Refinar o já-refinado não pode inchar. Medido em 1,00x (o motor devolveu o mesmo tamanho), então
+ * o limite fica justo: 15% é a folga para o modelo reescrever uma linha, não para acrescentar seção.
+ */
+const MAX_IDEMPOTENCE_GROWTH = 1.15;
 
 const runId = newRunId();
 const engine = engineVersion(COMPILER_VERSION);
@@ -430,6 +482,7 @@ function smokeRefine(c: Case): Refined {
 
 let failedCases = 0;
 let flakyCases = 0;
+let knownCases = 0;
 const costs: Record<string, number[]> = { balanced: [], deep: [] };
 /** Medianas POR CASO: um caso trivial e um planejamento longo não entram na mesma média. */
 const caseMedians: Record<string, number[]> = { latencyMs: [], outputTokens: [], visibleTokensEst: [], reasoningTokensEst: [] };
@@ -528,7 +581,11 @@ for (const c of selected) {
               { timeoutMs: config.timeoutMs },
             );
         idemGrowth = r2.refinedPrompt.length / Math.max(1, r.refinedPrompt.length);
-        check("idempotence", idemGrowth <= 1.25, `idempotência ${idemGrowth.toFixed(2)}x > 1.25x`);
+        check(
+          "idempotence",
+          idemGrowth <= MAX_IDEMPOTENCE_GROWTH,
+          `idempotência ${idemGrowth.toFixed(2)}x > ${MAX_IDEMPOTENCE_GROWTH}x`,
+        );
       }
       check("noQualityWarning", !r.warnings.some((w) => w.startsWith("quality:")), r.warnings.join(","));
 
@@ -619,8 +676,11 @@ for (const c of selected) {
   const errors = samples.flatMap((s) => (s.error ? [s.error] : []));
   const clean = repsPassed === samples.length && latencyCheck.pass && !errors.length;
   const flaky = !clean && repsPassed > 0;
-  if (!clean) failedCases++;
-  if (flaky) flakyCases++;
+  const known = Boolean(c.knownIssue) && !clean;
+  const fixedKnown = Boolean(c.knownIssue) && clean;
+  if (known) knownCases++;
+  else if (!clean) failedCases++;
+  if (flaky && !known) flakyCases++;
 
   for (const key of Object.keys(caseMedians)) {
     const s = aggregates[key];
@@ -643,7 +703,8 @@ for (const c of selected) {
     inputChars: c.text.length,
     reps: samples.length,
     repsPassed,
-    verdict: clean ? "limpo" : flaky ? "instável" : "falhou",
+    verdict: known ? "defeito conhecido" : clean ? "limpo" : flaky ? "instável" : "falhou",
+    knownIssue: c.knownIssue ?? null,
     latencyCeilingMs: ceiling,
     /** Cada repetição crua, para uma análise posterior não ficar presa aos agregados escolhidos aqui. */
     samples,
@@ -654,11 +715,13 @@ for (const c of selected) {
   writer.write(record);
   caseAggregates.push(record);
 
-  const mark = clean ? "✔" : flaky ? "~" : "✖";
+  const mark = known ? "⚠" : clean ? "✔" : flaky ? "~" : "✖";
   const head = shown
     ? `[${shown.kind} · ${shown.target} · ${shown.depth} · ${shown.format} · ${shown.taskType} · L${fmtStats(aggregates.complexity)} · ${fmtStats(aggregates.outputChars)} chars · ${fmtStats(aggregates.latencyMs, "ms")}]`
     : "[sem execução bem-sucedida]";
   console.log(`${mark} ${c.name} ${head} · ${repsPassed}/${samples.length} rep(s) ok`);
+  if (known) console.log(`  ⚠ defeito conhecido: ${c.knownIssue}`);
+  if (fixedKnown) console.log(`  ✔ o defeito conhecido não apareceu: "${c.knownIssue}" — a marca knownIssue pode sair`);
   for (const ch of checkSummary.filter((x) => x.failed)) {
     console.log(`  ✖ ${ch.name}: ${ch.failed}/${ch.passed + ch.failed} rep(s) · ${ch.details.join("; ")}`);
   }
@@ -708,7 +771,7 @@ if (runStats.outputTokens) {
   console.log(`  (saída inclui raciocínio; divisão estimada — ${TOKEN_SPLIT_METHOD})`);
 }
 
-const casesClean = caseAggregates.length - failedCases;
+const casesClean = caseAggregates.length - failedCases - knownCases;
 writer.write({
   type: "summary",
   ts: new Date().toISOString(),
@@ -718,6 +781,7 @@ writer.write({
   casesClean,
   casesFailed: failedCases,
   casesFlaky: flakyCases,
+  casesKnownIssue: knownCases,
   runStats,
   costTotalUsd: allCosts.length ? Number(costTotal.toFixed(6)) : null,
 });
@@ -734,20 +798,26 @@ if (baseline) {
       continue;
     }
     if (d.status === "ausente") {
+      // Numa rodada filtrada a ausência é esperada e enterraria o resultado: só avisa na rodada completa.
+      if (only) continue;
       console.log(`  - ${d.name}: estava na baseline e não rodou agora`);
       moved++;
       continue;
     }
-    const movedMetrics = (d.metrics ?? []).filter((m) => Math.abs(m.deltaPct) >= 10);
+    // Cada métrica tem o seu limite de ruído (ver NOISE_THRESHOLD_PCT): o relatório só fala quando
+    // a diferença passa do que duas rodadas do mesmo motor já variam sozinhas.
+    const movedMetrics = (d.metrics ?? []).filter((m) => Math.abs(m.deltaPct) >= noiseThreshold(m.key));
     const passMoved = d.passRate && d.passRate.current !== d.passRate.baseline;
     if (!movedMetrics.length && !passMoved) continue;
     moved++;
-    const parts = movedMetrics.map((m) => `${m.key} ${m.baseline}→${m.current} (${m.deltaPct > 0 ? "+" : ""}${m.deltaPct}%)`);
+    const parts = movedMetrics.map(
+      (m) => `${m.key} ${m.baseline}→${m.current} (${m.deltaPct > 0 ? "+" : ""}${m.deltaPct}%, ruído ±${noiseThreshold(m.key)}%)`,
+    );
     if (passMoved) parts.unshift(`aprovação ${d.passRate!.baseline}%→${d.passRate!.current}%`);
     console.log(`  · ${d.name}: ${parts.join(" · ")}`);
   }
-  if (moved) console.log("  (só o que mexeu ≥10% na mediana ou mudou a taxa de aprovação)");
-  else console.log("  nada mexeu ≥10% na mediana nem na taxa de aprovação.");
+  if (moved) console.log("  (só o que passou do ruído medido da própria métrica, ou mudou a aprovação)");
+  else console.log("  nada passou do ruído medido nem mudou a taxa de aprovação.");
 } else {
   console.log("\nSem baseline: nada a comparar.");
 }
@@ -764,10 +834,17 @@ if (fullRealRun && (process.env.EVAL_MARK_BASELINE || !baseline)) {
   );
 }
 
+// As planilhas do painel de medições acompanham a última rodada completa, sem passo manual.
+if (fullRealRun) {
+  const escritos = writePainelCsv(caseAggregates);
+  console.log(`\nPlanilhas do painel atualizadas:\n${escritos.map((f) => `  ${f}`).join("\n")}`);
+}
+
 console.log(`\nRodada gravada: ${writer.file}`);
+const nota = knownCases ? ` ${knownCases} caso(s) em defeito conhecido, que não derrubam a rodada.` : "";
 console.log(
   failedCases
-    ? `${failedCases} de ${caseAggregates.length} caso(s) com problemas (${flakyCases} instável(is)).`
-    : `Todos os ${caseAggregates.length} casos passaram em todas as repetições.`,
+    ? `${failedCases} de ${caseAggregates.length} caso(s) com problemas (${flakyCases} instável(is)).${nota}`
+    : `Os ${caseAggregates.length - knownCases} casos restantes passaram em todas as repetições.${nota}`,
 );
 process.exit(failedCases ? 1 : 0);

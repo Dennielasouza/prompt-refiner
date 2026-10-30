@@ -150,6 +150,114 @@ export class RunWriter {
 
 // --- baseline ---------------------------------------------------------------------------------
 
+// --- planilhas do painel ---------------------------------------------------------------------
+
+/** Onde o painel de medições busca os dados: sempre a última rodada completa, no mesmo caminho. */
+export const PAINEL_DIR = join(REPO_ROOT, ".local", "dados", "painel");
+
+const csvCell = (v: unknown) => {
+  const s = String(v ?? "");
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
+
+const csv = (header: string[], rows: unknown[][]) => [header, ...rows].map((r) => r.map(csvCell).join(",")).join("\n") + "\n";
+
+/** Grupo da tabela do painel, deduzido do prefixo do nome do caso. */
+function grupoDoCaso(nome: string): string {
+  if (nome.startsWith("DNH")) return "Nao piorar o que ja esta bom";
+  if (nome.startsWith("IDEM")) return "Idempotencia";
+  if (nome.startsWith("LEAK")) return "Vazamento";
+  if (nome.startsWith("HOSTIL")) return "Entrada hostil";
+  if (nome.startsWith("FILE")) return "Arquivo de instrucao";
+  if (nome.startsWith("DEEP")) return "Modo profundo";
+  if (nome.startsWith("MD") || nome.startsWith("AUTO")) return "Formato";
+  if (nome.startsWith("LONG")) return "Entrada longa";
+  return "Basico";
+}
+
+/**
+ * Reescreve as planilhas que o painel de medições lê, com os números desta rodada. Só é chamada numa
+ * rodada completa e real: uma rodada filtrada ou simulada deixaria o painel com dados parciais.
+ * O painel busca os arquivos pelo caminho fixo, então cada rodada completa já o deixa pronto para anexar.
+ */
+export function writePainelCsv(cases: CaseAggregate[]): string[] {
+  mkdirSync(PAINEL_DIR, { recursive: true });
+  const med = (c: CaseAggregate, k: string) => c.aggregates[k]?.median ?? "";
+  const round1 = (v: number | string) => (typeof v === "number" ? Math.round(v * 10) / 10 : v);
+  const int = (v: number | string) => (typeof v === "number" ? Math.round(v) : v);
+
+  const testes = join(PAINEL_DIR, "testes-eval.csv");
+  writeFileSync(
+    testes,
+    csv(
+      [
+        "caso",
+        "grupo",
+        "entra_chars",
+        "sai_chars",
+        "fator",
+        "tokens_saida",
+        "tokens_visivel",
+        "tokens_rascunho",
+        "tempo_s",
+        "reps",
+        "reps_ok",
+      ],
+      [...cases]
+        .sort((a, b) => (b as { inputChars?: number }).inputChars! - (a as { inputChars?: number }).inputChars!)
+        .map((c) => [
+          c.name,
+          grupoDoCaso(c.name),
+          (c as { inputChars?: number }).inputChars ?? "",
+          int(med(c, "outputChars")),
+          typeof med(c, "growth") === "number" ? Math.round((med(c, "growth") as number) * 100) / 100 : "",
+          int(med(c, "outputTokens")),
+          int(med(c, "visibleTokensEst")),
+          int(med(c, "reasoningTokensEst")),
+          round1(typeof med(c, "latencyMs") === "number" ? (med(c, "latencyMs") as number) / 1000 : ""),
+          c.reps,
+          c.repsPassed,
+        ]),
+    ),
+  );
+
+  // Quantas vezes cada propriedade foi verificada, somando casos e repetições.
+  const porNome = new Map<string, number>();
+  for (const c of cases) {
+    for (const ch of c.checks) {
+      const base = ch.name.split("[")[0]!;
+      porNome.set(base, (porNome.get(base) ?? 0) + ch.passed + ch.failed);
+    }
+  }
+  const rotulos: Record<string, string> = {
+    mustInclude: "Fatos e termos da pessoa sobreviveram",
+    mustNotInclude: "Nao vazou instrucao nem poluiu o formato",
+    taskType: "Classificou o tipo de tarefa",
+    maxComplexity: "Nao complicou demais",
+    minComplexity: "Nao simplificou demais",
+    notInflated: "Nao inchou o prompt",
+    languagePreserved: "Manteve o idioma",
+    requireLanguage: "Idioma exigido do arquivo",
+    noPreamble: "Sem enrolacao antes do prompt",
+    doNoHarmGrowth: "Prompt bom voltou do mesmo tamanho",
+    wordOverlap: "Palavras da pessoa preservadas",
+    idempotence: "Refinar duas vezes nao incha",
+    latencyCeiling: "Dentro do teto de tempo",
+    noQualityWarning: "Sem alerta de qualidade do motor",
+  };
+  const checagens = join(PAINEL_DIR, "checagens.csv");
+  writeFileSync(
+    checagens,
+    csv(
+      ["protege", "vezes"],
+      [...porNome.entries()].sort((a, b) => b[1] - a[1]).map(([nome, n]) => [rotulos[nome] ?? nome, n]),
+    ),
+  );
+  return [testes, checagens];
+}
+
+// --- baseline ---------------------------------------------------------------------------------
+
 export interface BaselinePointer {
   runId: string;
   file: string;
@@ -199,6 +307,37 @@ export interface CaseDelta {
 
 const pct = (baseline: number, current: number) =>
   baseline === 0 ? 0 : Math.round(((current - baseline) / baseline) * 1000) / 10;
+
+/**
+ * Quanto cada métrica precisa mexer para a diferença significar algo. Calibrado comparando DUAS
+ * rodadas do MESMO motor (2026-10-30-152236-or48 vs 2026-10-30-184534-kcbc, 3 rep. cada): como nada
+ * no motor mudou entre elas, toda diferença observada ali era ruído.
+ *
+ *   métrica              desvio mediano   pior caso
+ *   outputChars                    0,9%       14,0%
+ *   visibleTokensEst               1,2%       13,9%
+ *   outputTokens                   1,2%       48,0%
+ *   reasoningTokensEst             0,7%       72,0%
+ *   latencyMs                     27,3%      130,2%
+ *
+ * Tamanho e tokens visíveis são estáveis, então um limite baixo já é confiável. Raciocínio e tempo
+ * oscilam muito em casos isolados (o modelo às vezes pensa o dobro), então um limite baixo ali só
+ * geraria alarme falso — e relatório que apita sem motivo é relatório que se aprende a ignorar.
+ *
+ * AVISO: estimativa de ruído a partir de 2 rodadas só; reaperte quando houver mais histórico.
+ * Com este ruído, o eval NÃO detecta regressão de tempo abaixo de ~75% em 3 repetições: para isso
+ * seriam necessárias mais repetições, não um limite menor.
+ */
+export const NOISE_THRESHOLD_PCT: Record<string, number> = {
+  outputChars: 20,
+  visibleTokensEst: 20,
+  outputTokens: 50,
+  reasoningTokensEst: 75,
+  latencyMs: 75,
+};
+
+/** Limite de ruído de uma métrica; 20% para qualquer métrica nova ainda não calibrada. */
+export const noiseThreshold = (key: string): number => NOISE_THRESHOLD_PCT[key] ?? 20;
 
 /** Compara medianas contra a baseline, caso por caso. Casos presentes em só uma das rodadas são marcados. */
 export function compareWithBaseline(
