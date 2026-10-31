@@ -54,7 +54,7 @@ enum CLI {
         let endpoint = RefineCore.normalizedEndpoint(raw)
         let client = RefineClient(endpoint: endpoint, timeout: timeout ?? RefineCore.requestTimeout)
         let done = DispatchSemaphore(value: 0)
-        var outcome: Result<String, RefineFailure> = .failure(.invalidResponse)
+        var outcome: Result<RefineCore.Refined, RefineFailure> = .failure(.invalidResponse)
         client.refine(text: "Explique fotossíntese para uma criança de 10 anos.", target: .generic, depth: .balanced,
                       language: Locale.preferredLanguages.first) { result in
             outcome = result
@@ -62,8 +62,9 @@ enum CLI {
         }
         done.wait()
         switch outcome {
-        case let .success(prompt):
-            print("OK: prompt refinado (\(prompt.count) caracteres) via \(endpoint)")
+        case let .success(refined):
+            let extra = refined.suggestion.map { " · \($0)" } ?? ""
+            print("OK: prompt refinado (\(refined.prompt.count) caracteres) via \(endpoint)\(extra)")
             exit(0)
         case let .failure(failure):
             print("FALHA [\(failure)]: \(failure.title) \(failure.detail(endpoint: endpoint) ?? "")")

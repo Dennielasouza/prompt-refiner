@@ -24,7 +24,6 @@ export function fakeProvider(answer: (req: CompileRequest) => unknown | Promise<
 export const validOutput = (refinedPrompt = "Analise a hierarquia visual do dashboard.") => ({
   taskType: "ux",
   complexity: 2,
-  strategies: ["objective", "grounding"],
   refinedPrompt,
   warnings: [],
 });

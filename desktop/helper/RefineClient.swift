@@ -24,7 +24,7 @@ final class RefineClient {
     /// `completion` runs on a background queue.
     @discardableResult
     func refine(text: String, target: RefineTarget, depth: RefineDepth, language: String?,
-                completion: @escaping (Result<String, RefineFailure>) -> Void) -> URLSessionDataTask? {
+                completion: @escaping (Result<RefineCore.Refined, RefineFailure>) -> Void) -> URLSessionDataTask? {
         guard let url = URL(string: endpoint + "/api/refine") else {
             completion(.failure(.unavailable))
             return nil

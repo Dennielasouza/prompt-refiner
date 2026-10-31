@@ -25,7 +25,7 @@ describe("POST /api/refine", () => {
       "format",
       "kind",
       "refinedPrompt",
-      "strategies",
+      "suggestion",
       "target",
       "taskType",
       "warnings",

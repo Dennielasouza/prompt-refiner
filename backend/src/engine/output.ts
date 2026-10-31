@@ -9,7 +9,6 @@ export type ValidatedOutput = {
   refinedPrompt: string;
   taskType: TaskType;
   complexity: Complexity;
-  strategies: string[];
   warnings: string[];
 };
 
@@ -115,5 +114,5 @@ export function validateCompilerOutput(raw: unknown, originalText: string, opts:
   if (srcLang && outLang && srcLang !== outLang) warnings.push(`quality:language_drift:${srcLang}->${outLang}`);
   if (MOJIBAKE.test(refinedPrompt) && !MOJIBAKE.test(originalText)) warnings.push("quality:mojibake");
 
-  return { refinedPrompt, taskType, complexity, strategies: stringList(obj.strategies), warnings };
+  return { refinedPrompt, taskType, complexity, warnings };
 }

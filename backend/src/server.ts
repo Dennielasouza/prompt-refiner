@@ -136,7 +136,7 @@ export function buildServer(
         kind: result.kind,
         taskType: result.taskType,
         complexity: result.complexity,
-        strategies: result.strategies,
+        suggestion: result.suggestion,
         warnings: result.warnings,
       };
       return body;

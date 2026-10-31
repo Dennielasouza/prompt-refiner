@@ -3,6 +3,7 @@ import { ProviderError } from "../providers/types.js";
 import { buildCoreInstruction, buildSystemParts, buildUserMessage } from "./instruction.js";
 import { guessLanguage } from "./language.js";
 import { InvalidOutputError, validateCompilerOutput } from "./output.js";
+import { recommend } from "./recommendation.js";
 import { COMPILER_OUTPUT_SCHEMA } from "./schema.js";
 import { resolveTarget } from "./targets.js";
 import type { RefineInput, RefineResult } from "./types.js";
@@ -52,7 +53,11 @@ export async function refinePrompt(
   ]);
 
   try {
-    return { ...validateCompilerOutput(raw, input.text, { kind }), target, depth, format, kind };
+    const out = validateCompilerOutput(raw, input.text, { kind });
+    // Reuses the analysis the compiler already did — no second call, no extra token.
+    // Only for prompts: a CLAUDE.md/AGENTS.md is a config file nobody runs against a model.
+    const suggestion = kind === "prompt" ? recommend(out.complexity, out.taskType, target) : undefined;
+    return { ...out, suggestion, target, depth, format, kind };
   } catch (err) {
     if (err instanceof InvalidOutputError) throw new ProviderError("invalid_output", err.message);
     throw err;

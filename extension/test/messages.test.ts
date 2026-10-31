@@ -56,9 +56,7 @@ describe("message validation", () => {
     assert.ok(!isLastFailure(null));
   });
   it("validates backend responses", () => {
-    assert.ok(
-      isRefineResponse({ refinedPrompt: "p", target: "gemini", taskType: "x", complexity: 1, strategies: [], warnings: [] }),
-    );
+    assert.ok(isRefineResponse({ refinedPrompt: "p", target: "gemini", taskType: "x", complexity: 1, warnings: [] }));
     assert.ok(
       isRefineResponse({
         refinedPrompt: "# P",
@@ -68,7 +66,7 @@ describe("message validation", () => {
         kind: "claude-md",
         taskType: "x",
         complexity: 1,
-        strategies: [],
+        suggestion: { model: "Haiku 5.5", effort: "low" },
         warnings: [],
       }),
     );

@@ -40,7 +40,7 @@ const provider: CompilerProvider = {
         : mode === "file"
           ? "# Projeto\n\n## Comandos\n\n- `npm test`"
           : `REFINADO para ${target}`;
-    return { intent: "x", taskType: "ux", complexity: 2, strategies: ["objective"], refinedPrompt, warnings: [] };
+    return { intent: "x", taskType: "ux", complexity: 2, refinedPrompt, warnings: [] };
   },
 };
 
@@ -310,7 +310,8 @@ describe("extension smoke test", () => {
       "Último parágrafo (não deve mudar).",
     ]);
     assert.equal(requestBodies[0].hostname, "localhost", "auto mode sends the hostname");
-    assert.match(await toastText(), /^✓Prompt refinadoDesfazer/);
+    // The success toast now carries the model suggestion between the title and the Undo button.
+    assert.match(await toastText(), /^✓Prompt refinadoSugestão: .+, esforço (baixo|médio|alto)Desfazer/);
     await clickToastButton("Desfazer");
     await page
       .waitForFunction(() => document.querySelectorAll("#ce p")[1].textContent!.startsWith("cria um endpoint"), null, {
