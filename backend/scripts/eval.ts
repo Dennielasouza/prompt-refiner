@@ -10,6 +10,37 @@
  *   EVAL_REPS=3              repetições por caso (padrão 3)
  *   EVAL_MARK_BASELINE=1     marca esta rodada como referência das próximas
  *   EVAL_SMOKE=1             provider simulado: valida o runner e o JSONL, NÃO mede qualidade
+ *
+ * --- AS REGRAS, O LIMITE DE CADA UMA E DE ONDE O LIMITE VEIO ---
+ *
+ * BLOQUEIAM a publicação (falha):
+ *   taskType            classificou o tipo de tarefa      | dentro da lista do caso         | o tipo governa o resto
+ *   maxComplexity       não complicou demais              | nível ≤ rótulo do caso          | rótulo escrito à mão
+ *   minComplexity       não simplificou demais             | nível ≥ rótulo do caso          | rótulo escrito à mão
+ *   notInflated         não inchou o prompt               | andaime +120/+515/+1982 por nível| máx medido × 1,18
+ *   languagePreserved   manteve o idioma da pessoa        | idioma detectado igual          | trocar idioma é piorar
+ *   requireLanguage     idioma exigido do arquivo         | igual ao pedido                 | contrato do CLAUDE.md
+ *   noPreamble          não devolveu conversa             | regex de abertura               | o campo recebe o prompt
+ *   mustInclude         fatos da pessoa sobreviveram      | regex por caso                  | regra 2 do motor
+ *   mustNotInclude      não vazou instrução nem poluiu    | regex por caso                  | regra 2 do motor
+ *   doNoHarmGrowth      não cresceu sem motivo            | razão por caso                  | medido por caso
+ *   wordOverlap         não reescreveu por reescrever     | sobreposição mín. por caso      | medido por caso
+ *   idempotence         refinar o refinado não incha      | ≤ 1,15×                         | ruído medido do motor
+ *   latencyCeiling      respondeu em tempo de uso         | 20–35 s por nível               | p95 medido + folga
+ *   noQualityWarning    o portão de qualidade não reclamou| nenhum aviso "quality:"         | portão do próprio motor
+ *   isolation           não vazou o uso anterior          | nenhuma marca da sonda          | binário, sem zona cinzenta
+ *   recModelNotTooWeak  modelo não fraco demais           | ≥ mínimo da faixa rotulada      | perda de qualidade
+ *   recEffortNotTooWeak esforço não fraco demais          | ≥ mínimo da faixa rotulada      | perda de qualidade
+ *
+ * só ALERTAM (`severity: "warn"` — ficam no JSONL e no resumo, não derrubam):
+ *   noNewEntities       não inventou conteúdo             | nenhuma entidade nova           | taxa de falso positivo NÃO medida
+ *   recModelNotTooStrong modelo não forte demais          | ≤ máximo da faixa rotulada      | desperdiça dinheiro, não qualidade
+ *   recEffortNotTooStrong esforço não forte demais        | ≤ máximo da faixa rotulada      | desperdiça dinheiro, não qualidade
+ *
+ * A assimetria da camada 2 é deliberada: errar PARA BAIXO custa qualidade (bloqueia), errar PARA
+ * CIMA custa dinheiro (alerta). Ver `.local/relatorio-criterios-nivel-e-esforco.md`.
+ * O que NÃO está aqui — juiz de qualidade e teste ponta a ponta — está planejado em
+ * `.local/plano-juiz-e-ponta-a-ponta.md`, sem código.
  */
 import { existsSync } from "node:fs";
 import { loadConfig } from "../src/config/env.js";
@@ -63,6 +94,19 @@ interface Case {
   idempotent?: boolean;
   /** Teto de latência (ms) para este caso. */
   maxLatencyMs?: number;
+  /**
+   * Isolamento entre usos: este pedido é refinado ANTES do caso, na mesma execução, e nenhuma das
+   * marcas de `forbidden` pode aparecer na saída do caso. Pega vazamento de contexto entre chamadas.
+   */
+  isolationProbe?: { text: string; target: RequestedTarget; forbidden: RegExp[] };
+  /**
+   * Camada 2 — faixa ACEITÁVEL do modelo recomendado, pelos nomes que a sugestão mostra. O índice
+   * na escada da família do destino define a faixa: abaixo do mínimo é "fraco demais" (perda de
+   * qualidade, BLOQUEIA); acima do máximo é "forte demais" (desperdício, ALERTA).
+   */
+  expectModelIn?: string[];
+  /** Camada 2 — faixa aceitável do esforço recomendado. Mesma assimetria do modelo. */
+  expectEffortIn?: ("low" | "medium" | "high")[];
   /**
    * Defeito conhecido do motor, descrito em uma linha. O caso roda e o resultado fica gravado, mas a
    * falha não derruba a rodada: suíte vermelha permanente ensina a ignorar a suíte. Vermelho passa a
@@ -366,7 +410,234 @@ const CASES: Case[] = [
     mustInclude: [/media\(/, /reduce/],
     // Sem teto próprio: medido em 6,3 s, bem dentro do teto do nível. Um override de 120 s não media nada.
   },
+  {
+    // REGRA "isolamento entre usos": o pedido da sonda é de outro assunto por completo (plantas de
+    // varanda), e nenhuma marca dele pode aparecer no refino de física que vem depois.
+    name: "ISO · pedido anterior não contamina o seguinte",
+    text: "calcula a velocidade de escape de um corpo saindo de marte e compara com a da terra, mostra a formula",
+    target: "claude",
+    isolationProbe: {
+      text: "faz uma lista de plantas que aguentam sol direto e pouca agua pra varanda, separa por porte",
+      target: "claude",
+      forbidden: [/planta/i, /varanda/i, /sol direto/i, /\brega\b/i, /suculenta/i, /jardi/i, /vaso/i],
+    },
+  },
+  // --- CAMADA 2: o modelo e o esforço recomendados caem na faixa certa? ---
+  // Cada faixa vem de uma linha do relatório de critérios (.local/relatorio-criterios-nivel-e-esforco.md),
+  // não de preferência. "Fraco demais" bloqueia; "forte demais" só alerta.
+  {
+    // Piso, regra 1: tarefa que RODA ou AGE nunca no menor modelo.
+    name: "REC · código pequeno não vai no menor modelo",
+    text: "escreve uma função em js que valida cpf e retorna true ou false",
+    target: "claude",
+    expectModelIn: ["Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
+    expectEffortIn: ["medium", "high"],
+  },
+  {
+    // Mesmo piso, pela porta da depuração: achar a causa é mais caro que escrever.
+    name: "REC · depuração não vai no menor modelo",
+    text: "o total do carrinho fica errado quando aplica cupom duas vezes, descobre a causa e corrige",
+    target: "claude",
+    expectModelIn: ["Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
+    expectEffortIn: ["medium", "high"],
+  },
+  {
+    // Missão de agente: várias etapas, decide sozinho no meio. Esforço alto em qualquer nível ≥3.
+    name: "REC · tarefa de agente pede esforço alto",
+    text: "entra no meu repositorio, roda os testes, descobre quais falham, corrige um por um e abre um pr no final",
+    target: "claude-code",
+    expectModelIn: ["Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
+    expectEffortIn: ["high"],
+  },
+  {
+    // O contraponto: se nenhum caso pudesse ir no menor modelo, a economia seria zero por construção.
+    name: "REC · transformação trivial pode ir no menor modelo",
+    text: "deixa esse texto mais formal: oi, tudo bem? queria saber se da pra remarcar a reuniao de quinta",
+    target: "claude",
+    expectModelIn: ["Haiku 5.5", "Sonnet 5.5"],
+    expectEffortIn: ["low", "medium"],
+  },
+  {
+    // Piso, regra 2: o que o motor leu como complexo não cai abaixo do degrau do meio.
+    name: "REC · pedido complexo não cai abaixo do meio",
+    text: "analisa esses tres cenarios de precificacao pro meu saas (por assento, por uso, hibrido), compara receita previsivel, risco de churn e esforco de implementacao, e recomenda um com justificativa",
+    target: "claude",
+    expectModelIn: ["Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
+    expectEffortIn: ["medium", "high"],
+    // O caso está certo e o motor está errado: ele lê isto como nível 2, e o piso só promove a
+    // partir do 3, então a sugestão aponta o menor modelo para uma comparação de três cenários em
+    // três critérios. É o mesmo defeito medido em 31/10 (os níveis 4 e 5 codificam AUTONOMIA, não
+    // dificuldade, então o teto de um pedido difícil de uma entrega só é 3) — agora pego sozinho.
+    // Marcado porque o conserto é no motor, que esta tarefa não altera.
+    knownIssue: "motor lê comparação de 3 cenários × 3 critérios como nível 2; o piso então permite o menor modelo",
+  },
+  {
+    // Família de três degraus: o mapeamento de nível para degrau tem de respeitar o tamanho da escada.
+    name: "REC · família de três degraus mapeia sem inventar nome",
+    text: "conserta esse bug de off-by-one no loop que paginava os resultados",
+    target: "codex",
+    expectModelIn: ["Sol", "Astra"],
+    expectEffortIn: ["medium", "high"],
+  },
 ];
+
+/**
+ * --- REGRA: não incha (teto por nível de complexidade, nos dois modos) ---
+ *
+ * O limite é sobre o ANDAIME ACRESCENTADO (`saída − entrada`), não sobre o tamanho absoluto da
+ * saída. É isso que "inchar" significa: quanta estrutura o motor pendurou em cima do texto da
+ * pessoa. Medir o absoluto confunde "a entrada era grande" com "o motor inchou", e foi exatamente
+ * o erro da primeira calibragem — reprovou um caso legítimo de 180 caracteres por um teto de 170.
+ *
+ * Máximo observado de `saída − entrada` nas rodadas gravadas (só kind "prompt"), + 18% de folga:
+ *
+ *   nível 1:   102 em 129 repetições →   120
+ *   nível 2:   436 em 266 repetições →   515
+ *   nível 3: 1.680 em 123 repetições → 1.982
+ *
+ * O modo profundo foi medido separadamente e cabe no mesmo teto por nível (nível 1: 102 profundo
+ * vs 86 equilibrado; nível 2: 436 vs 434; nível 3: 1.668 vs 1.680) — um teto por nível cobre os
+ * dois modos sem inventar um segundo conjunto de números.
+ *
+ * PROVISÓRIO nos níveis 4 e 5. O nível 4 só apareceu 11 vezes, todas no mesmo caso de entrada
+ * longa (andaime 266), o que não diz nada sobre entrada curta nesse nível; o nível 5 nunca
+ * apareceu. Os valores abaixo seguem a progressão medida de 2 para 3 (~3,8×) e devem ser
+ * recalibrados quando houver observação de verdade.
+ */
+const INFLATION_ADDED_CHARS: Record<Complexity, number> = { 1: 120, 2: 515, 3: 1_982, 4: 4_000, 5: 8_000 };
+/** Níveis cujo teto ainda é extrapolação, não medição. */
+const INFLATION_PROVISIONAL: ReadonlySet<Complexity> = new Set<Complexity>([4, 5]);
+
+/**
+ * --- CAMADA 2: escada de modelos por família, declarada pelo EVAL ---
+ *
+ * De propósito separada da escada do motor (`src/engine/recommendation.ts`): se o motor mudar a
+ * escada, o eval acusa em vez de concordar automaticamente. Ordem: menor → ultra. Famílias têm
+ * tamanhos diferentes (Anthropic publica 4 degraus, OpenAI e Google 3), conforme o relatório de
+ * critérios.
+ */
+const LADDERS: Record<string, readonly string[]> = {
+  claude: ["Haiku 5.5", "Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
+  "claude-code": ["Haiku 5.5", "Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
+  chatgpt: ["Luna", "Sol", "Astra"],
+  codex: ["Luna", "Sol", "Astra"],
+  gemini: ["3.5 Flash-Lite", "3.8 Flash", "4 Argon"],
+};
+const EFFORT_RANK = { low: 0, medium: 1, high: 2 } as const;
+
+/**
+ * --- REGRA: não inventa conteúdo (ALERTA, não falha) ---
+ *
+ * Ancoragem por entidades de classe fechada (Passo 2 do plano validado). Uma entidade que aparece
+ * na SAÍDA e não na ENTRADA é candidata a invenção. É ALERTA de propósito: a taxa de falso positivo
+ * ainda não foi medida, e o resumo da rodada reporta os alertas POR CLASSE justamente para medi-la
+ * antes de qualquer promoção a falha.
+ */
+function normEntity(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/(\d)[.\s](?=\d{3}\b)/g, "$1")
+    .replace(/(\d),(\d)/g, "$1.$2")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Vocabulário de MÉTODO: o que um prompt refinado legitimamente acrescenta sem inventar fato — a
+ * regra 3 do motor distingue método de fato. Sem esta lista, toda seção nova viraria alerta.
+ */
+const METHOD_VOCAB: ReadonlySet<string> = new Set(
+  [
+    "devolva apenas",
+    "critérios",
+    "formato",
+    "formato de saída",
+    "objetivo",
+    "contexto",
+    "restrições",
+    "entrada",
+    "saída",
+    "passos",
+    "validação",
+    "markdown",
+    "json",
+    "todo",
+    "resultado",
+    "resumo",
+    "exemplo",
+    "requisitos",
+    "escopo",
+    "etapas",
+    "verificação",
+    "output format",
+    "criteria",
+    "constraints",
+    "objective",
+    "context",
+    "steps",
+    "validation",
+    "summary",
+    "example",
+    "requirements",
+    "scope",
+    "deliverable",
+    "checklist",
+    "verification",
+  ].map(normEntity),
+);
+
+const ENTITY_CLASSES: readonly { name: string; re: RegExp }[] = [
+  { name: "url", re: /https?:\/\/[^\s)<>"']+/g },
+  { name: "email", re: /[\w.+-]+@[\w-]+\.[\w.-]+/g },
+  {
+    // Caminho de verdade: raiz explícita, DUAS barras ou mais, ou extensão conhecida. Uma barra
+    // solta entre duas palavras é prosa ("offset/limite", "início/fim"), não caminho, e `</tag>`
+    // é tag de fechamento, não caminho — os dois falsos positivos que a primeira rodada mostrou.
+    name: "caminho",
+    re: /(?<![\w.</-])(?:\.{1,2}\/|~\/|\/)[\w.-]+(?:\/[\w.-]+)*|(?<![\w.-])[\w.-]+(?:\/[\w.-]+){2,}|\b[\w-]+\.(?:ts|js|tsx|jsx|json|md|yml|yaml|sql|py|sh|env|csv|ofx|xml)\b/g,
+  },
+  {
+    // Número COM unidade, moeda ou porcentagem. Número solto não entra: geraria ruído puro.
+    name: "numero",
+    re: /(?:r\$\s*)?\d[\d.,]*\s*(?:%|mil|milhões|k|reais|dólares|usd|brl|h|min|ms|dias?|semanas?|meses|anos?|lojas?|pedidos?|linhas?|vezes)\b/gi,
+  },
+  { name: "citado", re: /"([^"\n]{4,80})"|“([^”\n]{4,80})”/g },
+  {
+    // Duas palavras capitalizadas SEGUIDAS, sem atravessar fim de frase nem quebra de linha —
+    // sem isso, "…do contexto. Chegar…" virava a entidade "contexto chegar", e a classe `nome`
+    // era quase só esse falso positivo.
+    name: "nome",
+    re: /(?<![.:!?]\s)\b[A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][\wÀ-ÿ]{2,}(?: [A-ZÁÀÂÃÉÊÍÓÔÕÚÇ][\wÀ-ÿ]{2,})+/g,
+  },
+];
+
+/** Entidades da saída ausentes da entrada, por classe. Vazio = nada novo. */
+function newEntitiesByClass(input: string, output: string): { class: string; values: string[] }[] {
+  const haystack = normEntity(input);
+  const found: { class: string; values: string[] }[] = [];
+  for (const { name, re } of ENTITY_CLASSES) {
+    const novel = new Set<string>();
+    for (const m of output.matchAll(re)) {
+      const value = normEntity(m[1] ?? m[2] ?? m[0]);
+      // Já estava na entrada (em qualquer lugar do texto), ou é vocabulário de método → não é nova.
+      if (value.length < 3 || haystack.includes(value) || METHOD_VOCAB.has(value)) continue;
+      novel.add(value);
+    }
+    if (novel.size) found.push({ class: name, values: [...novel].slice(0, 8) });
+  }
+  return found;
+}
+
+/** Tokens escritos (não vindos do cache) por nível de complexidade, para a mediana do resumo. */
+const WRITTEN_BY_LEVEL: number[][] = [[], [], [], [], []];
+/** Alertas que falharam, por nome de regra → quantos casos. */
+const ALERT_CASES = new Map<string, Set<string>>();
+/** Alertas de fidelidade por CLASSE de entidade — é assim que a taxa de falso positivo aparece. */
+const ENTITY_ALERTS = new Map<string, number>();
+/** Camada 2: casos rotulados e em quais a recomendação errou, por direção do erro. */
+const REC = { labelled: new Set<string>(), tooWeak: new Set<string>(), tooStrong: new Set<string>() };
 
 const PREAMBLE = /^(aqui está|segue|here is|here's|prompt refinado)/i;
 
@@ -443,6 +714,11 @@ interface Check {
   pass: boolean;
   /** Só quando falha: o que deu errado, para o console e para o JSONL. */
   detail?: string;
+  /**
+   * Ausente = BLOQUEIA a rodada (falha). `"warn"` = ALERTA: fica gravado, sai no resumo e não
+   * derruba a publicação. Usado onde a regra ainda não tem taxa de falso positivo medida.
+   */
+  severity?: "warn";
 }
 
 interface Sample {
@@ -462,6 +738,8 @@ interface Sample {
     output: { total: number; visibleEst: number; reasoningEst: number };
   } | null;
   costUsd: number | null;
+  /** Fidelidade: entidades que a saída introduziu e a entrada não tinha, por classe. Alerta. */
+  newEntities: { class: string; values: string[] }[] | null;
   checks: Check[];
   error?: string;
 }
@@ -498,6 +776,13 @@ for (const c of selected) {
     const started = Date.now();
     try {
       let usage: TokenUsage | undefined;
+      // REGRA "isolamento entre usos": um pedido de assunto totalmente diferente roda ANTES, na
+      // mesma execução e no mesmo provider. Se o motor guardar contexto entre chamadas, aparece
+      // na saída do caso — que é o que o check `isolation` verifica depois.
+      if (c.isolationProbe && !SMOKE)
+        await refinePrompt({ text: c.isolationProbe.text, target: c.isolationProbe.target, language: "pt-BR" }, provider, {
+          timeoutMs: config.timeoutMs,
+        });
       const r = SMOKE
         ? smokeRefine(c)
         : await refinePrompt(
@@ -526,6 +811,15 @@ for (const c of selected) {
       const check = (name: string, pass: boolean, detail?: string): void => {
         checks.push(pass ? { name, pass: true } : { name, pass: false, detail });
       };
+      /** ALERTA: fica gravado, sai no resumo e NÃO derruba a rodada. */
+      const warn = (name: string, pass: boolean, detail?: string): void => {
+        checks.push(pass ? { name, pass: true, severity: "warn" } : { name, pass: false, detail, severity: "warn" });
+        if (!pass) {
+          const set = ALERT_CASES.get(name) ?? new Set<string>();
+          set.add(c.name);
+          ALERT_CASES.set(name, set);
+        }
+      };
 
       if (c.expectTypes) check("taskType", c.expectTypes.includes(r.taskType), `taskType=${r.taskType}`);
       if (c.maxComplexity)
@@ -534,9 +828,17 @@ for (const c of selected) {
         check("minComplexity", r.complexity >= c.minComplexity, `complexity ${r.complexity} < ${c.minComplexity}`);
       // Instruction files legitimately expand short notes; the size budgets apply to prompts only.
       const isFile = (c.kind ?? "prompt") !== "prompt";
-      const budget = Math.max(500, c.text.length * 5);
-      if (!isFile && (r.complexity <= 1 || (c.depth !== "deep" && r.complexity <= 2)))
-        check("notInflated", r.refinedPrompt.length <= budget, `inflated (${r.refinedPrompt.length} chars > ${budget})`);
+      // REGRA "não incha": teto por NÍVEL, nos DOIS modos e em TODOS os níveis — antes, nível 3+ não
+      // tinha teto nenhum e o modo profundo não tinha teto do nível 2 para cima. Ver
+      // INFLATION_CEILING_CHARS para a origem de cada número.
+      const added = r.refinedPrompt.length - c.text.length;
+      const addedCeiling = INFLATION_ADDED_CHARS[r.complexity];
+      if (!isFile)
+        check(
+          "notInflated",
+          added <= addedCeiling,
+          `andaime +${added} chars > +${addedCeiling} (L${r.complexity}, ${c.depth ?? "balanced"}${INFLATION_PROVISIONAL.has(r.complexity) ? ", teto PROVISÓRIO" : ""})`,
+        );
       const src = guessLanguage(c.text),
         out = guessLanguage(r.refinedPrompt);
       if (src && out) check("languagePreserved", src === out, `language ${src}→${out}`);
@@ -587,6 +889,48 @@ for (const c of selected) {
           `idempotência ${idemGrowth.toFixed(2)}x > ${MAX_IDEMPOTENCE_GROWTH}x`,
         );
       }
+      if (c.isolationProbe) {
+        const leaked = c.isolationProbe.forbidden.filter((re) => re.test(r.refinedPrompt));
+        check("isolation", leaked.length === 0, `vazou do pedido anterior: ${leaked.join(", ")}`);
+      }
+
+      // REGRA "não inventa conteúdo" — ALERTA, porque a taxa de falso positivo ainda não foi medida.
+      const newEnts = isFile ? null : newEntitiesByClass(c.text, r.refinedPrompt);
+      if (newEnts) {
+        for (const e of newEnts) ENTITY_ALERTS.set(e.class, (ENTITY_ALERTS.get(e.class) ?? 0) + 1);
+        warn("noNewEntities", newEnts.length === 0, newEnts.map((e) => `${e.class}: ${e.values.join(" | ")}`).join(" · "));
+      }
+
+      // CAMADA 2 — a recomendação caiu na faixa rotulada? Assimetria de propósito: fraco demais é
+      // perda de qualidade e BLOQUEIA; forte demais é desperdício de dinheiro e só ALERTA.
+      if ((c.expectModelIn || c.expectEffortIn) && r.suggestion) {
+        REC.labelled.add(c.name);
+        const ladder = LADDERS[r.target];
+        if (c.expectModelIn && ladder) {
+          const got = ladder.indexOf(r.suggestion.model);
+          const want = c.expectModelIn.map((m) => ladder.indexOf(m)).filter((i) => i >= 0);
+          if (got >= 0 && want.length) {
+            const lo = Math.min(...want);
+            const hi = Math.max(...want);
+            if (got < lo) REC.tooWeak.add(c.name);
+            if (got > hi) REC.tooStrong.add(c.name);
+            check("recModelNotTooWeak", got >= lo, `${r.suggestion.model} abaixo de ${ladder[lo]}`);
+            warn("recModelNotTooStrong", got <= hi, `${r.suggestion.model} acima de ${ladder[hi]}`);
+          }
+        }
+        if (c.expectEffortIn) {
+          const got = EFFORT_RANK[r.suggestion.effort];
+          const want = c.expectEffortIn.map((e) => EFFORT_RANK[e]);
+          const lo = Math.min(...want);
+          const hi = Math.max(...want);
+          if (got < lo) REC.tooWeak.add(c.name);
+          if (got > hi) REC.tooStrong.add(c.name);
+          const band = c.expectEffortIn.join("|");
+          check("recEffortNotTooWeak", got >= lo, `esforço ${r.suggestion.effort} abaixo da faixa ${band}`);
+          warn("recEffortNotTooStrong", got <= hi, `esforço ${r.suggestion.effort} acima da faixa ${band}`);
+        }
+      }
+
       check("noQualityWarning", !r.warnings.some((w) => w.startsWith("quality:")), r.warnings.join(","));
 
       samples.push({
@@ -607,8 +951,10 @@ for (const c of selected) {
             }
           : null,
         costUsd: cost,
+        newEntities: newEnts,
         checks,
       });
+      if (usage) WRITTEN_BY_LEVEL[r.complexity - 1].push(splitOutputTokens(usage.outputTokens, r.refinedPrompt).total);
     } catch (err) {
       samples.push({
         rep,
@@ -621,6 +967,7 @@ for (const c of selected) {
         idemGrowth: null,
         tokens: null,
         costUsd: null,
+        newEntities: null,
         checks: [],
         error: (err as Error).message,
       });
@@ -661,9 +1008,11 @@ for (const c of selected) {
       : { name: "latencyCeiling", pass: true };
 
   // Uma checagem que passa em 2 de 3 repetições é instável, não é aprovada.
-  const byCheck = new Map<string, { name: string; passed: number; failed: number; details: string[] }>();
+  const byCheck = new Map<string, { name: string; passed: number; failed: number; details: string[]; severity?: "warn" }>();
   for (const ch of [...samples.flatMap((s) => s.checks), latencyCheck]) {
     const entry = byCheck.get(ch.name) ?? { name: ch.name, passed: 0, failed: 0, details: [] };
+    // Campo novo, opcional: ausente = bloqueia. Mantém o JSONL aditivo.
+    if (ch.severity) entry.severity = ch.severity;
     if (ch.pass) entry.passed++;
     else {
       entry.failed++;
@@ -672,7 +1021,9 @@ for (const c of selected) {
     byCheck.set(ch.name, entry);
   }
   const checkSummary = [...byCheck.values()];
-  const repsPassed = samples.filter((s) => !s.error && s.checks.every((ch) => ch.pass)).length;
+  // Um ALERTA (`severity: "warn"`) não conta como repetição reprovada: ele aparece no resumo e no
+  // JSONL, mas não bloqueia a publicação. Só falha sem severidade derruba a repetição.
+  const repsPassed = samples.filter((s) => !s.error && s.checks.every((ch) => ch.pass || ch.severity === "warn")).length;
   const errors = samples.flatMap((s) => (s.error ? [s.error] : []));
   const clean = repsPassed === samples.length && latencyCheck.pass && !errors.length;
   const flaky = !clean && repsPassed > 0;
@@ -771,6 +1122,56 @@ if (runStats.outputTokens) {
   console.log(`  (saída inclui raciocínio; divisão estimada — ${TOKEN_SPLIT_METHOD})`);
 }
 
+// --- Tokens ESCRITOS por nível de complexidade ---
+// O prompt do sistema vai em cache; o que varia de verdade a cada uso é o que o motor escreve.
+// Por nível, porque é o nível que decide quanta estrutura o prompt refinado pode receber.
+const writtenTokensByLevel: Record<string, Stats | null> = {};
+for (const [i, list] of WRITTEN_BY_LEVEL.entries()) writtenTokensByLevel[String(i + 1)] = stats(list);
+const anyWritten = Object.values(writtenTokensByLevel).some((v) => v);
+if (anyWritten) {
+  console.log("\nTokens escritos por nível (o que não vem do cache):");
+  for (const [level, s] of Object.entries(writtenTokensByLevel)) {
+    const provisional = INFLATION_PROVISIONAL.has(Number(level) as Complexity) ? " · teto PROVISÓRIO" : "";
+    console.log(
+      s
+        ? `  nível ${level}: mediana ${s.median} · p25–p75 ${s.p25}–${s.p75} · ${s.n} repetição(ões)${provisional}`
+        : `  nível ${level}: sem dados nesta rodada${provisional}`,
+    );
+  }
+}
+
+// --- Alertas: contados e nomeados, mas NÃO bloqueiam a publicação ---
+const alertSummary = [...ALERT_CASES.entries()].map(([name, set]) => ({ name, cases: [...set] }));
+if (alertSummary.length) {
+  console.log("\nAlertas (não bloqueiam a publicação):");
+  for (const a of alertSummary) console.log(`  ${a.name}: ${a.cases.length} caso(s) — ${a.cases.join(" · ")}`);
+}
+// Por CLASSE de entidade: é esta tabela que mede a taxa de falso positivo da regra de fidelidade,
+// e é o que decide se algum dia ela pode virar bloqueio. Sem ela, promover seria chute.
+const entitySummary = Object.fromEntries([...ENTITY_ALERTS.entries()].sort((a, b) => b[1] - a[1]));
+if (Object.keys(entitySummary).length) {
+  console.log(
+    `  fidelidade, por classe de entidade: ${Object.entries(entitySummary)
+      .map(([k, v]) => `${k} ${v}`)
+      .join(" · ")}`,
+  );
+  console.log("  (revisar à mão antes de promover a bloqueio — a taxa de falso positivo não está medida)");
+}
+
+// --- Camada 2: os dois tipos de erro, medidos separadamente ---
+const recSummary = {
+  labelled: REC.labelled.size,
+  tooWeak: [...REC.tooWeak],
+  tooStrong: [...REC.tooStrong],
+};
+if (recSummary.labelled) {
+  console.log(
+    `\nRecomendação de modelo/esforço (${recSummary.labelled} caso(s) rotulado(s)):\n` +
+      `  fraco demais (bloqueia, custa qualidade): ${recSummary.tooWeak.length}${recSummary.tooWeak.length ? ` — ${recSummary.tooWeak.join(" · ")}` : ""}\n` +
+      `  forte demais (alerta, custa dinheiro):    ${recSummary.tooStrong.length}${recSummary.tooStrong.length ? ` — ${recSummary.tooStrong.join(" · ")}` : ""}`,
+  );
+}
+
 const casesClean = caseAggregates.length - failedCases - knownCases;
 writer.write({
   type: "summary",
@@ -783,6 +1184,12 @@ writer.write({
   casesFlaky: flakyCases,
   casesKnownIssue: knownCases,
   runStats,
+  // Campos NOVOS, acrescentados ao formato existente — nada foi removido nem renomeado.
+  writtenTokensByLevel,
+  inflationCeilings: { addedChars: INFLATION_ADDED_CHARS, provisional: [...INFLATION_PROVISIONAL] },
+  alerts: alertSummary,
+  entityAlertsByClass: entitySummary,
+  recommendation: recSummary,
   costTotalUsd: allCosts.length ? Number(costTotal.toFixed(6)) : null,
 });
 

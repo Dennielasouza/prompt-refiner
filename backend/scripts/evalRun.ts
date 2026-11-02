@@ -236,6 +236,12 @@ export function writePainelCsv(cases: CaseAggregate[]): string[] {
     maxComplexity: "Nao complicou demais",
     minComplexity: "Nao simplificou demais",
     notInflated: "Nao inchou o prompt",
+    isolation: "Nao vazou contexto do uso anterior",
+    noNewEntities: "Nao inventou conteudo (alerta)",
+    recModelNotTooWeak: "Nao recomendou modelo fraco demais",
+    recModelNotTooStrong: "Nao recomendou modelo forte demais (alerta)",
+    recEffortNotTooWeak: "Nao recomendou esforco fraco demais",
+    recEffortNotTooStrong: "Nao recomendou esforco forte demais (alerta)",
     languagePreserved: "Manteve o idioma",
     requireLanguage: "Idioma exigido do arquivo",
     noPreamble: "Sem enrolacao antes do prompt",
@@ -271,7 +277,8 @@ export interface CaseAggregate {
   reps: number;
   repsPassed: number;
   aggregates: Record<string, Stats | null>;
-  checks: { name: string; passed: number; failed: number; details: string[] }[];
+  /** `severity: "warn"` = alerta: conta no resumo e não bloqueia. Ausente = bloqueia. */
+  checks: { name: string; passed: number; failed: number; details: string[]; severity?: "warn" }[];
 }
 
 export function readBaseline(): { pointer: BaselinePointer; cases: CaseAggregate[] } | null {
