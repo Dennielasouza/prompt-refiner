@@ -8,23 +8,25 @@ import type { Complexity, Target, TaskType } from "./types.js";
  * extra token. Complexity was designed to cap prompt inflation, but its levels are a reading of
  * how hard the request is (1 trivial … 5 long autonomous mission), which is the same axis.
  *
- * Model names come from what is actually documented:
- *  - Anthropic: the models this project prices in config/pricing.ts, plus Fable as the top tier
- *    (Anthropic positions Fable above Opus, though it says Opus 5.5 comes close on most tasks).
- *  - OpenAI: the three text models and their effort levels in the API docs; the tier mapping
- *    follows OpenAI's own model-selection guide ("keep the lightest setting that meets your
- *    quality bar"), e.g. Luna for focused work, Sol for complex technical work, Astra for
- *    ambitious projects. Astra is already the top of that family — there is no fourth name.
- *  - Google: the three text tiers in ai.google.dev/gemini-api/docs/models; its thinking_level
- *    takes low/medium/high, the same vocabulary used here. 4 Argon is the current top tier
- *    (confirmed by the owner, 2026-10-31) — third-party roundups still list Pro and are stale.
+ * Names are what the destination's OWN MENU shows, because a suggestion nobody can pick is
+ * useless. Checked against the official docs on 2026-11-02 (.local/relatorio-modelo-e-esforco-oficial.md):
+ *  - Claude and Claude Code: the menu picks a model and an effort
+ *    (support.claude.com/en/articles/8664678).
+ *  - ChatGPT: the menu does NOT pick a model. Paid plans select GPT-6 and move a Thinking slider
+ *    (Instant · Medium · High · Extra High · Pro); GPT-6 Sol powers every position except Pro,
+ *    which is GPT-6 Pro on Astra (help.openai.com/en/articles/20001354). So the "model" here is
+ *    what the menu says, and the effort is the slider position: low ≈ Instant, medium ≈ Medium,
+ *    high ≈ High. Free and Go plans only get GPT-5.6 Luna, which this cannot know about.
+ *  - Codex: the menu picks a model — Luna, Terra, Sol, Astra, smallest first
+ *    (developers.openai.com/api/docs/models). Terra sits between Luna and Sol; an earlier
+ *    version of this file said OpenAI had no fourth name, which was wrong.
+ *  - Gemini: the app menu lists Flash-Lite, Flash, Pro and Argon, without version numbers
+ *    (support.google.com/gemini/answer/18648722).
  *
- * LADDER LENGTHS DIFFER. Anthropic publishes four tiers, the other two three, so the levels here
- * are canonical (0 smallest … 3 ultra) and each family maps them onto the rungs it actually has.
- * A three-rung family therefore spends two canonical levels on its middle model and separates
- * them by effort instead. This is deliberate: inventing a fourth OpenAI or Gemini name would make
- * the product name a model that does not exist. Appending a real name to a family is all it takes
- * for that family to use all four.
+ * LADDER LENGTHS MAY DIFFER, so the levels here are canonical (0 smallest … 3 ultra) and each
+ * family maps them onto the rungs it actually has (`rungFor`). Every family has four today, but
+ * the mapping stays general: a family whose vendor publishes fewer tiers must share a rung
+ * rather than name a model that does not exist.
  *
  * When the destination is unknown ("generic") it names all three, because a size description
  * ("a fast model") is not something anyone can act on in a model picker.
@@ -47,19 +49,21 @@ export interface Recommendation {
   effort: Effort;
 }
 
-/** Per-destination model names, smallest first. Lengths may differ between families. */
+/** Per-destination names as each menu shows them, smallest first. Lengths may differ. */
 const FAMILIES = {
-  // The models this project prices in config/pricing.ts, plus the top tier above Opus.
   anthropic: ["Haiku 5.5", "Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
-  // Both OpenAI surfaces: chatgpt.com and the Codex agent. Astra is the documented top.
-  openai: ["Luna", "Sol", "Astra"],
-  google: ["3.5 Flash-Lite", "3.8 Flash", "4 Argon"],
+  // Not a model ladder: ChatGPT shows one model on the first three rungs and tells them apart by
+  // the Thinking slider, which `effort` already carries. Only the top rung is a different choice.
+  chatgpt: ["GPT-6", "GPT-6", "GPT-6", "GPT-6 Pro"],
+  codex: ["Luna", "Terra", "Sol", "Astra"],
+  google: ["Flash-Lite", "Flash", "Pro", "Argon"],
 } as const satisfies Record<string, readonly [string, string, string, ...string[]]>;
 
 type Family = keyof typeof FAMILIES;
 
 function familyFor(target: Target): Family | null {
-  if (target === "chatgpt" || target === "codex") return "openai";
+  if (target === "chatgpt") return "chatgpt";
+  if (target === "codex") return "codex";
   if (target === "claude" || target === "claude-code") return "anthropic";
   if (target === "gemini") return "google";
   return null; // destination unknown — name them all
@@ -78,10 +82,10 @@ function modelIn(family: Family, level: Level): string {
   return ladder[rungFor(level, ladder.length)];
 }
 
-/** "Haiku 5.5 (Claude), Luna (ChatGPT) ou 3.5 Flash-Lite (Gemini)" */
+/** "Haiku 5.5 (Claude), GPT-6 (ChatGPT) ou Flash-Lite (Gemini)" */
 function everyFamily(level: Level): string {
   const a = modelIn("anthropic", level);
-  const o = modelIn("openai", level);
+  const o = modelIn("chatgpt", level);
   const g = modelIn("google", level);
   return `${a} (Claude), ${o} (ChatGPT) ou ${g} (Gemini)`;
 }

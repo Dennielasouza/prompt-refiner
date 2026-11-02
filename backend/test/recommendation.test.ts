@@ -7,14 +7,14 @@ import { type Complexity, TASK_TYPES, type TaskType } from "../src/engine/types.
 
 describe("recommend", () => {
   it("suggests the smallest model and lowest effort for a trivial request", () => {
-    assert.deepEqual(recommend(1, "general", "chatgpt"), { model: "Luna", effort: "low" });
+    assert.deepEqual(recommend(1, "general", "codex"), { model: "Luna", effort: "low" });
     assert.deepEqual(recommend(1, "general", "claude"), { model: "Haiku 5.5", effort: "low" });
   });
 
   it("suggests more model and more effort as the request gets harder", () => {
     assert.deepEqual(recommend(3, "general", "claude"), { model: "Sonnet 5.5", effort: "medium" });
     assert.deepEqual(recommend(5, "general", "claude"), { model: "Fable 5.1", effort: "high" });
-    assert.deepEqual(recommend(5, "general", "chatgpt"), { model: "Astra", effort: "high" });
+    assert.deepEqual(recommend(5, "general", "codex"), { model: "Astra", effort: "high" });
   });
 
   it("never gets cheaper as complexity goes up — model AND effort, for every task type", () => {
@@ -51,7 +51,7 @@ describe("recommend", () => {
   it("raises effort before model for task types that have to run or act", () => {
     // Same complexity as the general case, but code runs: effort goes up, the model does not.
     assert.deepEqual(recommend(3, "debugging", "claude"), { model: "Sonnet 5.5", effort: "high" });
-    assert.deepEqual(recommend(3, "agent_task", "chatgpt"), { model: "Sol", effort: "high" });
+    assert.deepEqual(recommend(3, "agent_task", "codex"), { model: "Terra", effort: "high" });
   });
 
   it("drops the MODEL first for lighter task types, because that is where the money is", () => {
@@ -77,19 +77,21 @@ describe("recommend", () => {
     assert.deepEqual(recommend(1, "rewriting", "claude"), { model: "Haiku 5.5", effort: "low" });
   });
 
-  it("names the real Gemini model for the gemini destination", () => {
-    assert.deepEqual(recommend(1, "general", "gemini"), { model: "3.5 Flash-Lite", effort: "low" });
-    assert.deepEqual(recommend(5, "general", "gemini"), { model: "4 Argon", effort: "high" });
+  it("names the Gemini model the way the app menu shows it, Pro included", () => {
+    assert.deepEqual(recommend(1, "general", "gemini"), { model: "Flash-Lite", effort: "low" });
+    assert.deepEqual(recommend(3, "general", "gemini"), { model: "Flash", effort: "medium" });
+    assert.deepEqual(recommend(4, "general", "gemini"), { model: "Pro", effort: "high" });
+    assert.deepEqual(recommend(5, "general", "gemini"), { model: "Argon", effort: "high" });
   });
 
   it("names every family when the destination is unknown — never a vague size", () => {
     // "um modelo rápido" is not something anyone can pick in a model menu.
     assert.deepEqual(recommend(1, "general", "generic"), {
-      model: "Haiku 5.5 (Claude), Luna (ChatGPT) ou 3.5 Flash-Lite (Gemini)",
+      model: "Haiku 5.5 (Claude), GPT-6 (ChatGPT) ou Flash-Lite (Gemini)",
       effort: "low",
     });
     assert.deepEqual(recommend(5, "general", "generic"), {
-      model: "Fable 5.1 (Claude), Astra (ChatGPT) ou 4 Argon (Gemini)",
+      model: "Fable 5.1 (Claude), GPT-6 Pro (ChatGPT) ou Argon (Gemini)",
       effort: "high",
     });
   });
@@ -112,21 +114,29 @@ describe("recommend", () => {
     assert.equal(recommend(4, "coding", "claude").model, "Fable 5.1");
   });
 
-  it("a three-rung family shares its middle model across two levels instead of inventing a name", () => {
-    // Astra is the documented top of the OpenAI family; there is no fourth name to put above it.
-    // Levels 1 and 2 therefore both land on Sol, separated by effort rather than by a made-up model.
-    assert.deepEqual(recommend(3, "general", "chatgpt"), { model: "Sol", effort: "medium" });
-    assert.deepEqual(recommend(4, "general", "chatgpt"), { model: "Sol", effort: "high" });
-    assert.deepEqual(recommend(5, "general", "chatgpt"), { model: "Astra", effort: "high" });
+  it("ChatGPT suggests what its menu offers: one model plus a Thinking position, Pro on top", () => {
+    // ChatGPT's menu does not pick Luna, Sol or Astra — paid plans pick GPT-6 and move a slider.
+    // Naming a model there would be a suggestion nobody can apply.
+    assert.deepEqual(recommend(1, "general", "chatgpt"), { model: "GPT-6", effort: "low" });
+    assert.deepEqual(recommend(3, "general", "chatgpt"), { model: "GPT-6", effort: "medium" });
+    assert.deepEqual(recommend(4, "general", "chatgpt"), { model: "GPT-6", effort: "high" });
+    assert.deepEqual(recommend(5, "general", "chatgpt"), { model: "GPT-6 Pro", effort: "high" });
+  });
+
+  it("Codex uses all four OpenAI models, Terra included", () => {
+    // Terra sits between Luna and Sol; it used to be missing, which pushed level 1 up to Sol.
+    assert.deepEqual(recommend(3, "general", "codex"), { model: "Terra", effort: "medium" });
+    assert.deepEqual(recommend(4, "general", "codex"), { model: "Sol", effort: "high" });
+    assert.deepEqual(recommend(5, "general", "codex"), { model: "Astra", effort: "high" });
   });
 
   it("never names a model outside the destination's own family", () => {
     const ladders = {
       claude: ["Haiku 5.5", "Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
       "claude-code": ["Haiku 5.5", "Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
-      chatgpt: ["Luna", "Sol", "Astra"],
-      codex: ["Luna", "Sol", "Astra"],
-      gemini: ["3.5 Flash-Lite", "3.8 Flash", "4 Argon"],
+      chatgpt: ["GPT-6", "GPT-6 Pro"],
+      codex: ["Luna", "Terra", "Sol", "Astra"],
+      gemini: ["Flash-Lite", "Flash", "Pro", "Argon"],
     } as const;
     for (const [target, ladder] of Object.entries(ladders)) {
       for (const c of [1, 2, 3, 4, 5] as Complexity[]) {
@@ -144,8 +154,8 @@ describe("recommend", () => {
     for (const taskType of ["coding", "implementation", "debugging", "agent_task", "automation"] as const) {
       for (const c of [1, 2, 3, 4, 5] as Complexity[]) {
         assert.notEqual(recommend(c, taskType, "claude").model, "Haiku 5.5", `${taskType} at ${c}`);
-        assert.notEqual(recommend(c, taskType, "chatgpt").model, "Luna", `${taskType} at ${c}`);
-        assert.notEqual(recommend(c, taskType, "gemini").model, "3.5 Flash-Lite", `${taskType} at ${c}`);
+        assert.notEqual(recommend(c, taskType, "codex").model, "Luna", `${taskType} at ${c}`);
+        assert.notEqual(recommend(c, taskType, "gemini").model, "Flash-Lite", `${taskType} at ${c}`);
       }
     }
     assert.deepEqual(recommend(1, "coding", "claude"), { model: "Sonnet 5.5", effort: "medium" });
@@ -174,7 +184,7 @@ describe("recommend", () => {
   });
 
   it("uses the OpenAI family for Codex and the Anthropic one for Claude Code", () => {
-    assert.equal(recommend(3, "coding", "codex").model, "Sol");
+    assert.equal(recommend(3, "coding", "codex").model, "Terra");
     assert.equal(recommend(3, "coding", "claude-code").model, "Sonnet 5.5");
   });
 });
