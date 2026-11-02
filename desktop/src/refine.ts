@@ -30,6 +30,7 @@ import {
   type RefineRequestBody,
   type RefineResponseBody,
   type RequestedTarget,
+  suggestionLine,
   TARGET_LABELS,
   TARGETS,
   type Target,
@@ -164,7 +165,8 @@ export async function run(
   // Keep the selection's trailing line break, if it had one (common when selecting whole lines).
   const trailing = /\n+$/.exec(input)?.[0] ?? "";
   const done = file ? `${file} gerado` : (name ? `Prompt refinado para ${name}` : "Prompt refinado") + suffix;
-  await deps.feedback("success", `${done} — ⌘Z desfaz`);
+  // The suggestion goes to the HUD, never to stdout: stdout IS the text that replaces the selection.
+  await deps.feedback("success", `${done} — ⌘Z desfaz`, suggestionLine(data.suggestion));
   return { ok: true, output: data.refinedPrompt + trailing };
 }
 

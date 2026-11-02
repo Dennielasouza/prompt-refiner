@@ -131,8 +131,14 @@ enum RefineCore {
         return (try? JSONSerialization.data(withJSONObject: body, options: [.sortedKeys])) ?? Data()
     }
 
+    /// What a successful refinement gives back. `suggestion` is the optional model/effort line.
+    struct Refined: Equatable {
+        let prompt: String
+        let suggestion: String?
+    }
+
     /// Validates the backend answer; returns the refined prompt or why it is unusable.
-    static func parseResponse(status: Int, body: Data?) -> Result<String, RefineFailure> {
+    static func parseResponse(status: Int, body: Data?) -> Result<Refined, RefineFailure> {
         let json = body.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]
         guard (200..<300).contains(status) else {
             let code = (json?["error"] as? [String: Any])?["code"] as? String
@@ -143,7 +149,7 @@ enum RefineCore {
               prompt.utf16.count <= 40_000,
               let target = json?["target"] as? String, RefineTarget(rawValue: target) != nil
         else { return .failure(.invalidResponse) }
-        return .success(prompt)
+        return .success(Refined(prompt: prompt, suggestion: suggestionLine(json?["suggestion"])))
     }
 
     static func failure(fromTransportError error: Error) -> RefineFailure {
@@ -168,6 +174,16 @@ enum RefineCore {
     static func progressMessage(target: RefineTarget, depth: RefineDepth) -> String {
         let base = target.label.map { "Refinando para \($0)" } ?? "Refinando prompt"
         return base + (depth == .deep ? " (profundo)" : "") + "..."
+    }
+
+    /// Mirrors suggestionLine() in shared/api.ts. Anything unexpected yields nil, never a broken line.
+    static func suggestionLine(_ raw: Any?) -> String? {
+        guard let s = raw as? [String: Any],
+              let model = s["model"] as? String, !model.isEmpty, model.utf16.count <= 100,
+              let effort = s["effort"] as? String,
+              let label = ["low": "baixo", "medium": "médio", "high": "alto"][effort]
+        else { return nil }
+        return "Sugestão: \(model), esforço \(label)"
     }
 
     static func successMessage(target: RefineTarget, depth: RefineDepth) -> String {

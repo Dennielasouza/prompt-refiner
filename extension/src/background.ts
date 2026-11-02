@@ -10,6 +10,7 @@ import {
   REQUESTED_TARGETS,
   type RefineRequestBody,
   type RequestedTarget,
+  suggestionLine,
   TARGET_LABELS,
 } from "../../shared/api.js";
 import { REQUEST_TIMEOUT_MS, RefineError, requestRefinement, timeoutError } from "./api.js";
@@ -238,6 +239,7 @@ async function refine(tabId: number, frameId: number, requested: RequestedTarget
       target: result.target,
       depth,
       kind,
+      suggestion: suggestionLine(result.suggestion),
     }).then(
       () => true,
       () => false,

@@ -303,9 +303,8 @@ describe("output validation (quality gate)", () => {
     assert.deepEqual(same.warnings, []);
   });
   it("sanitizes metadata lists", () => {
-    const out = validateCompilerOutput({ ...validOutput(), strategies: ["a", "a", 3, "", "b"], warnings: "x" }, original);
-    assert.deepEqual(out.strategies, ["a", "b"]);
-    assert.deepEqual(out.warnings, []);
+    const out = validateCompilerOutput({ ...validOutput(), warnings: ["a", "a", 3, "", "b"] }, original);
+    assert.deepEqual(out.warnings, ["a", "b"]);
   });
 });
 

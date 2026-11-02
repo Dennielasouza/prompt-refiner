@@ -68,6 +68,30 @@ export interface RefineRequestBody {
   kind?: OutputKind;
 }
 
+/** Cheapest model + effort that should still do the job. Suggestion, not a measurement. */
+export interface ModelSuggestion {
+  model: string;
+  effort: "low" | "medium" | "high";
+}
+
+const EFFORT_LABELS: Record<ModelSuggestion["effort"], string> = { low: "baixo", medium: "médio", high: "alto" };
+
+/**
+ * One pt-BR line for the toast / HUD. "Sugestão", never "ideal" — it is a heuristic.
+ *
+ * The backend response is untrusted like every other field, and the endpoint is configurable,
+ * so anything unexpected yields undefined rather than a broken line ("esforço undefined") or a
+ * string long enough to fail the message validator and drop the whole pr:apply.
+ * Mirrored in desktop/helper/RefineCore.swift.
+ */
+export function suggestionLine(s: unknown): string | undefined {
+  if (!s || typeof s !== "object") return undefined;
+  const { model, effort } = s as Record<string, unknown>;
+  if (typeof model !== "string" || model === "" || model.length > 100) return undefined;
+  const label = typeof effort === "string" ? EFFORT_LABELS[effort as ModelSuggestion["effort"]] : undefined;
+  return label ? `Sugestão: ${model}, esforço ${label}` : undefined;
+}
+
 export interface RefineResponseBody {
   refinedPrompt: string;
   target: Target;
@@ -76,7 +100,8 @@ export interface RefineResponseBody {
   kind: OutputKind;
   taskType: string;
   complexity: number;
-  strategies: string[];
+  /** Only for kind "prompt". */
+  suggestion?: ModelSuggestion;
   warnings: string[];
 }
 

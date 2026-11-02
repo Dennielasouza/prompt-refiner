@@ -21,7 +21,6 @@ const provider: CompilerProvider = {
       intent: "",
       taskType: "general",
       complexity: 1,
-      strategies: [],
       refinedPrompt: `Linha 1\n\nLinha 2 (${target})`,
       warnings: [],
     };
@@ -56,7 +55,10 @@ describe("desktop refine (macOS Service)", () => {
     const out = output(await run("faz um resumo disso\n", "claude", d));
     assert.equal(out, "Linha 1\n\nLinha 2 (Claude)\n");
     assert.deepEqual(seen.at(-1), { target: "Claude", text: "faz um resumo disso\n" });
-    assert.deepEqual(notes, ["progress: Refinando para Claude...", "success: Prompt refinado para Claude — ⌘Z desfaz"]);
+    assert.deepEqual(notes, [
+      "progress: Refinando para Claude...",
+      "success: Prompt refinado para Claude — ⌘Z desfaz | Sugestão: Haiku 5.5, esforço baixo",
+    ]);
   });
 
   it("sends depth=deep and labels the feedback", async () => {
@@ -72,7 +74,7 @@ describe("desktop refine (macOS Service)", () => {
       assert.equal(body.depth, "deep");
       assert.deepEqual(notes, [
         "progress: Refinando para Claude (profundo)...",
-        "success: Prompt refinado para Claude (profundo) — ⌘Z desfaz",
+        "success: Prompt refinado para Claude (profundo) — ⌘Z desfaz | Sugestão: Haiku 5.5, esforço baixo",
       ]);
     } finally {
       globalThis.fetch = realFetch;
