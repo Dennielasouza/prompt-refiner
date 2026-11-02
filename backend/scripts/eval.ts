@@ -472,11 +472,13 @@ const CASES: Case[] = [
     knownIssue: "motor lê comparação de 3 cenários × 3 critérios como nível 2; o piso então permite o menor modelo",
   },
   {
-    // Família de três degraus: o mapeamento de nível para degrau tem de respeitar o tamanho da escada.
-    name: "REC · família de três degraus mapeia sem inventar nome",
+    // Codex, bug pontual: nunca o menor modelo (piso, regra 1). O Terra vale — a OpenAI o indica
+    // para "correções de código com escopo definido". Este caso se chamava "família de três degraus";
+    // a premissa caiu em 02/11, quando o Terra entrou e a escada da OpenAI passou a ter quatro.
+    name: "REC · Codex: bug pontual não vai no menor modelo",
     text: "conserta esse bug de off-by-one no loop que paginava os resultados",
     target: "codex",
-    expectModelIn: ["Sol", "Astra"],
+    expectModelIn: ["Terra", "Sol", "Astra"],
     expectEffortIn: ["medium", "high"],
   },
 ];
@@ -512,16 +514,17 @@ const INFLATION_PROVISIONAL: ReadonlySet<Complexity> = new Set<Complexity>([4, 5
  * --- CAMADA 2: escada de modelos por família, declarada pelo EVAL ---
  *
  * De propósito separada da escada do motor (`src/engine/recommendation.ts`): se o motor mudar a
- * escada, o eval acusa em vez de concordar automaticamente. Ordem: menor → ultra. Famílias têm
- * tamanhos diferentes (Anthropic publica 4 degraus, OpenAI e Google 3), conforme o relatório de
- * critérios.
+ * escada, o eval acusa em vez de concordar automaticamente. Ordem: menor → ultra. Nomes como cada
+ * menu mostra, conferidos nas documentações oficiais em 02/11
+ * (.local/relatorio-modelo-e-esforco-oficial.md). O ChatGPT não escolhe modelo: GPT-6 nos níveis
+ * comuns, separados pela barra de pensamento, e GPT-6 Pro no topo.
  */
 const LADDERS: Record<string, readonly string[]> = {
   claude: ["Haiku 5.5", "Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
   "claude-code": ["Haiku 5.5", "Sonnet 5.5", "Opus 5.5", "Fable 5.1"],
-  chatgpt: ["Luna", "Sol", "Astra"],
-  codex: ["Luna", "Sol", "Astra"],
-  gemini: ["3.5 Flash-Lite", "3.8 Flash", "4 Argon"],
+  chatgpt: ["GPT-6", "GPT-6 Pro"],
+  codex: ["Luna", "Terra", "Sol", "Astra"],
+  gemini: ["Flash-Lite", "Flash", "Pro", "Argon"],
 };
 const EFFORT_RANK = { low: 0, medium: 1, high: 2 } as const;
 
