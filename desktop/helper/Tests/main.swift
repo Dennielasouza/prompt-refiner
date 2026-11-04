@@ -86,7 +86,18 @@ check("endpoint default / override / invalid", RefineCore.normalizedEndpoint(nil
 
 func json(_ s: String) -> Data { Data(s.utf8) }
 check("valid response → refined prompt",
-      RefineCore.parseResponse(status: 200, body: json(#"{"refinedPrompt":"Linha 1\n\nLinha 2","target":"claude","depth":"balanced"}"#)) == .success("Linha 1\n\nLinha 2"))
+      RefineCore.parseResponse(status: 200, body: json(#"{"refinedPrompt":"Linha 1\n\nLinha 2","target":"claude","depth":"balanced"}"#))
+        == .success(RefineCore.Refined(prompt: "Linha 1\n\nLinha 2", suggestion: nil)))
+
+// The ⌥⌥ path must show the same suggestion the macOS Service shows — see shared/api.ts.
+check("suggestion is parsed and formatted like shared/api.ts",
+      RefineCore.parseResponse(status: 200, body: json(#"{"refinedPrompt":"x","target":"claude","suggestion":{"model":"Haiku 5.5","effort":"low"}}"#))
+        == .success(RefineCore.Refined(prompt: "x", suggestion: "Sugestão: Haiku 5.5, esforço baixo")))
+check("a malformed suggestion is dropped, never shown broken",
+      RefineCore.suggestionLine(["model": "Sonnet 5.5", "effort": "turbo"]) == nil
+        && RefineCore.suggestionLine(["model": 42, "effort": "low"]) == nil
+        && RefineCore.suggestionLine(["model": String(repeating: "x", count: 101), "effort": "low"]) == nil
+        && RefineCore.suggestionLine(nil) == nil)
 check("blank refinedPrompt → invalidResponse", RefineCore.parseResponse(status: 200, body: json(#"{"refinedPrompt":"  \n","target":"claude"}"#)) == .failure(.invalidResponse))
 check("missing / unknown target → invalidResponse", RefineCore.parseResponse(status: 200, body: json(#"{"refinedPrompt":"x"}"#)) == .failure(.invalidResponse)
     && RefineCore.parseResponse(status: 200, body: json(#"{"refinedPrompt":"x","target":"auto"}"#)) == .failure(.invalidResponse))
@@ -124,7 +135,7 @@ check("count formatting", RefineCore.formatCount(12_000) == "12.000" && RefineCo
 // MARK: - RefineClient (real URLSession against a closed local port)
 
 let done = DispatchSemaphore(value: 0)
-var clientResult: Result<String, RefineFailure>?
+var clientResult: Result<RefineCore.Refined, RefineFailure>?
 RefineClient(endpoint: "http://127.0.0.1:9", timeout: 5).refine(text: "x", target: .generic, depth: .balanced, language: "pt-BR") {
     clientResult = $0
     done.signal()

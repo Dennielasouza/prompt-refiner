@@ -13,6 +13,7 @@ export {
 } from "../../../shared/api.js";
 
 import type { Depth, OutputKind, PromptFormat, RequestedTarget, Target } from "../../../shared/api.js";
+import type { Recommendation } from "./recommendation.js";
 
 export const TASK_TYPES = [
   "writing",
@@ -57,6 +58,7 @@ export interface RefineResult {
   kind: OutputKind;
   taskType: TaskType;
   complexity: Complexity;
-  strategies: string[];
+  /** Only for kind "prompt". */
+  suggestion?: Recommendation;
   warnings: string[];
 }

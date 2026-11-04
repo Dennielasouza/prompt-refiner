@@ -20,7 +20,16 @@ import {
  */
 export type ToContent =
   | { type: "pr:capture"; opId: string; target: RequestedTarget; depth: Depth; kind?: OutputKind }
-  | { type: "pr:apply"; opId: string; refinedPrompt: string; target: Target; depth: Depth; kind?: OutputKind }
+  | {
+      type: "pr:apply";
+      opId: string;
+      refinedPrompt: string;
+      target: Target;
+      depth: Depth;
+      kind?: OutputKind;
+      /** Ready-to-show pt-BR line, e.g. "Sugestão: Sonnet 5.5, esforço médio". */
+      suggestion?: string;
+    }
   | { type: "pr:error"; opId: string; detail?: string };
 
 /** content → background */
@@ -49,7 +58,8 @@ export function isToContent(m: unknown): m is ToContent {
         isStr(m.refinedPrompt, 40_000) &&
         TARGETS.includes(m.target as Target) &&
         DEPTHS.includes(m.depth as Depth) &&
-        isKind(m.kind)
+        isKind(m.kind) &&
+        (m.suggestion === undefined || isStr(m.suggestion, 160))
       );
     case "pr:error":
       return m.detail === undefined || isStr(m.detail, 300);
