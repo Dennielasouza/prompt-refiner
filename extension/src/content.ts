@@ -183,6 +183,8 @@ async function apply(msg: Extract<ToContent, { type: "pr:apply" }>): Promise<voi
   showToast({
     kind: "success",
     message: file ? `${file} gerado` : (name ? `Prompt refinado para ${name}` : "Prompt refinado") + depthSuffix(msg.depth),
+    // Which model/effort should run this prompt — a suggestion, never presented as optimal.
+    detail: msg.suggestion,
     action: { label: "Desfazer", onClick: () => showUndone(result.undo) },
   });
 }

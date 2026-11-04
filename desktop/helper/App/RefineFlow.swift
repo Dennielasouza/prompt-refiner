@@ -60,7 +60,10 @@ final class RefineFlow {
                 DispatchQueue.main.async {
                     switch result {
                     case let .success(refined):
-                        self.deliver(RefineCore.finalText(refined: refined, original: original), to: pid, target: target, depth: depth)
+                        self.deliver(
+                            RefineCore.finalText(refined: refined.prompt, original: original),
+                            to: pid, target: target, depth: depth, suggestion: refined.suggestion
+                        )
                     case let .failure(failure):
                         self.fail(failure, endpoint: endpoint)
                     }
@@ -88,7 +91,7 @@ final class RefineFlow {
         busy = false
     }
 
-    private func deliver(_ text: String, to pid: pid_t, target: RefineTarget, depth: RefineDepth) {
+    private func deliver(_ text: String, to pid: pid_t, target: RefineTarget, depth: RefineDepth, suggestion: String?) {
         let pasteboard = NSPasteboard.general
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
             // Never paste into another app. Keep the (paid-for) result on the clipboard instead.
@@ -123,6 +126,6 @@ final class RefineFlow {
         DispatchQueue.main.asyncAfter(deadline: .now() + maxRestoreDelay) { restore() }
 
         Keys.postCommand(Keys.v)
-        hud.show(.success, RefineCore.successMessage(target: target, depth: depth))
+        hud.show(.success, RefineCore.successMessage(target: target, depth: depth), detail: suggestion)
     }
 }

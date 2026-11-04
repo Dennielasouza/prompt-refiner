@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Depois de refinar, a extensão e o app do Mac sugerem **qual modelo e qual esforço** rodar aquele
+  prompt, para não gastar um modelo de topo num pedido que um pequeno resolve igual. Sai de uma
+  função pura sobre a complexidade e o tipo de tarefa que o motor já devolvia: nenhuma chamada
+  extra, nenhum token extra. Só para `kind: "prompt"`.
+
+  A escada tem quatro níveis (menor, médio, maior, ultra). As famílias de modelo não têm todas o
+  mesmo tamanho — a Anthropic publica quatro degraus, OpenAI e Google três —, então os níveis são
+  canônicos e cada família mapeia neles os degraus que tem de verdade, em vez de a sugestão
+  inventar um nome de modelo que não existe.
+
+  **A sugestão tem piso.** Ela só aponta abaixo do degrau do meio onde isso se defende, nunca por
+  ser mais barato: um pedido que **executa ou age** (código, agente) nunca vai para o menor
+  modelo, e nada que o motor leu como complexidade 3 ou mais cai abaixo do meio. Pedido realmente
+  trivial continua indo para o menor modelo — esse caso é o motivo de a sugestão existir. O piso
+  não é medido, e é piso justamente por isso: até existir a medição de tokens no destino, o padrão
+  seguro é apontar para baixo menos vezes, não mais.
+
+### Changed
+
+- **Quebra de contrato:** o campo `strategies` saiu da resposta de `POST /api/refine`. Vinha vazio
+  desde a V2. No lugar entrou `suggestion` (`{ model, effort }`), opcional.
+
+
 ### Fixed
 
 - **The installer now always installs in one place.** It used to install wherever the script

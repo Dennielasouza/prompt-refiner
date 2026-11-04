@@ -35,7 +35,6 @@ const provider: CompilerProvider = {
       intent: "x",
       taskType: "ux",
       complexity: 2,
-      strategies: ["objective"],
       refinedPrompt: `REFINADO para ${target}`,
       warnings: [],
     };
