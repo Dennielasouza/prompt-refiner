@@ -8,6 +8,7 @@ export const BACKEND_ERROR_DETAILS: Record<string, string> = {
   timeout: "O modelo demorou demais para responder. Tente novamente.",
   rate_limited: "O provedor de IA está sobrecarregado. Tente em instantes.",
   auth: "O backend não conseguiu autenticar no provedor de IA (verifique a chave de API).",
+  login_required: "O Claude Code do seu Mac não está conectado à sua conta. No Terminal, rode: claude auth login",
   refusal: "O modelo se recusou a refinar este texto.",
   invalid_output: "O modelo retornou uma resposta inválida. Tente novamente.",
   upstream: "Falha ao falar com o provedor de IA. Tente novamente.",

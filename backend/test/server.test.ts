@@ -128,6 +128,16 @@ describe("POST /api/refine", () => {
     }
   });
 
+  it("tells a signed-out Claude Code apart from a rejected API key", async () => {
+    // Same failure kind, different fix: `claude auth login` on the subscription path, the key on the API.
+    const { provider } = fakeProvider(() => Promise.reject(new ProviderError("auth", "not logged in")));
+    const cli = await post(buildServer(testConfig({ provider: "claude-cli" }), provider, false), { text: "x", target: "claude" });
+    assert.equal(cli.statusCode, 503);
+    assert.equal(cli.json().error.code, "login_required");
+    const api = await post(buildServer(testConfig(), provider, false), { text: "x", target: "claude" });
+    assert.equal(api.json().error.code, "auth");
+  });
+
   it("returns 502 when the LLM answer is invalid", async () => {
     const { provider } = fakeProvider(() => ({ refinedPrompt: "  ", taskType: "ux" }));
     const res = await post(buildServer(testConfig(), provider, false), { text: "x", target: "claude" });

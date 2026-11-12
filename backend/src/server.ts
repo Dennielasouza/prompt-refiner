@@ -155,7 +155,10 @@ export function buildServer(
           },
           "refine failed",
         );
-        return reply.code(ERROR_STATUS[err.kind]).send(errorBody(err.kind, "Não foi possível refinar o prompt."));
+        // On the subscription path "auth" means the local Claude Code is signed out, not a rejected API
+        // key: a code of its own lets the clients say what to actually do.
+        const code = err.kind === "auth" && config.provider === "claude-cli" ? "login_required" : err.kind;
+        return reply.code(ERROR_STATUS[err.kind]).send(errorBody(code, "Não foi possível refinar o prompt."));
       }
       throw err;
     }
